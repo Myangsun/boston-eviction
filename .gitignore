@@ -22,3 +22,6 @@ Thumbs.db
 # Vite
 *.log
 .vite
+.DS_Store
+.DS_Store
+.DS_Store
