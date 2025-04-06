@@ -1,7 +1,5 @@
+// svelte.config.js
 import adapter from "@sveltejs/adapter-static";
-
-/** @type {import('@sveltejs/kit').Config} */
-const dev = process.env.NODE_ENV === "development";
 
 const config = {
   kit: {
@@ -14,8 +12,9 @@ const config = {
     prerender: {
       handleHttpError: "warn",
     },
+    // Hard-code base path to always be /boston-eviction
     paths: {
-      base: dev ? "" : "/boston-eviction",
+      base: "/boston-eviction",
     },
   },
 };
