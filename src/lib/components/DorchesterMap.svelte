@@ -30,19 +30,44 @@
       1, // Opacity for selected tracts (slightly adjusted for better visibility)
       0  // Lower opacity for non-selected tracts
     ]);
+
+    // Update line width for tract outlines
+    map.setPaintProperty('dorchester-outline', 'line-width', [
+      'case',
+      ['in', ['get', 'tract_id'], ['literal', selected]],
+      1, // Thicker line for selected tracts
+      0.5  // Thinner line for non-selected tracts
+    ]);
+    
+    // Update line color for better visibility of selected tracts
+    map.setPaintProperty('dorchester-outline', 'line-color', [
+      'case',
+      ['in', ['get', 'tract_id'], ['literal', selected]],
+      '#000000', // Black outline for selected tracts
+      '#555555'  // Gray outline for non-selected tracts
+    ]);
   } catch (error) {
     console.error("Error updating fill opacity:", error);
   }
 }
-// Function to select Dorchester census tracts
-function selectDorchesterTracts() {
-    if (!$neighborhoodsData || !$dorchesterData) {
-      console.log("Waiting for data to load...");
+
+  // Function to select Dorchester census tracts
+  function selectDorchesterTracts() {
+    // Check if all required data is available
+    if (!$neighborhoodsData || !$dorchesterData || !$boundaryData || 
+        !$boundaryData.features || $boundaryData.features.length === 0) {
+      console.log("Waiting for all data to load...");
+      console.log("Neighborhoods data:", $neighborhoodsData ? "Loaded" : "Not loaded");
+      console.log("Dorchester data:", $dorchesterData ? "Loaded" : "Not loaded");
+      console.log("Boundary data:", $boundaryData ? 
+                  ($boundaryData.features ? `Loaded with ${$boundaryData.features.length} features` : "Loaded but no features") 
+                  : "Not loaded");
       return;
     }
     
     try {
       console.log("Finding Dorchester tracts...");
+      console.log("Boundary data features:", $boundaryData.features.length);
       
       // Find Dorchester feature in neighborhoods data
       const dorchesterFeature = $neighborhoodsData.features.find(
@@ -57,13 +82,12 @@ function selectDorchesterTracts() {
       
       // Create a Turf polygon for Dorchester
       let dorchesterPolygon;
-
+      
       // Handle both single polygon and multipolygon cases
       if (dorchesterFeature.geometry.type === 'Polygon') {
         dorchesterPolygon = turf.polygon(dorchesterFeature.geometry.coordinates);
       } else if (dorchesterFeature.geometry.type === 'MultiPolygon') {
         // For MultiPolygon, we'll just use the first polygon for simplicity
-        // Or you could use a union operation to combine them all
         dorchesterPolygon = turf.polygon(dorchesterFeature.geometry.coordinates[0]);
       } else {
         console.error("Unsupported geometry type:", dorchesterFeature.geometry.type);
@@ -73,31 +97,41 @@ function selectDorchesterTracts() {
       // Find all census tracts that are within Dorchester
       const dorchesterTracts = [];
       
-      console.log("tracts:", tracts);
       // Check each tract
-      tracts.forEach(tract => {
+      $dorchesterData.forEach(tract => {
+        // Get tract ID - handle different property names
+        const tractId = tract.tract_id || tract.GEOID || tract.geoid;
+        
+        if (!tractId) {
+          console.warn("Tract missing ID:", tract);
+          return; // Skip this tract
+        }
+        
         // Find the corresponding boundary feature
         const boundaryFeature = $boundaryData.features.find(
-          f => f.properties.geoid === tract.geoid
+          f => f.properties.GEOID === tractId || 
+               f.properties.geoid === tractId || 
+               f.properties.tract_id === tractId
         );
-        console.log("boundaryFeature:", boundaryFeature);
         
-        if (boundaryFeature) {
-          console.log("Processing tract:", tract.tract_id || tract.geoid);
-          try {
-            // Calculate centroid of the tract
-            const centroid = turf.centroid(boundaryFeature);
-            
-            // Check if the centroid is within Dorchester
-            if (turf.booleanPointInPolygon(centroid, dorchesterPolygon)) {
-              dorchesterTracts.push(tract.tract_id || tract.GEOID);
-            }
-          } catch (err) {
-            console.error("Error processing tract:", err);
+        if (!boundaryFeature) {
+          console.warn(`No boundary found for tract: ${tractId}`);
+          return; // Skip this tract
+        }
+        
+        try {
+          // Calculate centroid of the tract
+          const centroid = turf.centroid(boundaryFeature);
+          
+          // Check if the centroid is within Dorchester
+          if (centroid && turf.booleanPointInPolygon(centroid, dorchesterPolygon)) {
+            dorchesterTracts.push(tractId);
           }
+        } catch (err) {
+          console.error(`Error processing tract ${tractId}:`, err);
         }
       });
-
+      
       console.log(`Found ${dorchesterTracts.length} tracts within Dorchester`);
       
       // Set the selected census tracts
@@ -108,7 +142,14 @@ function selectDorchesterTracts() {
       console.error("Error selecting Dorchester tracts:", error);
     }
   }
-  
+
+  // Modify the reactive statement to ensure all data is available
+  // $: if ($neighborhoodsData && $dorchesterData && $boundaryData && 
+  //        $boundaryData.features && $boundaryData.features.length > 0) {
+  //   console.log("All data is loaded, selecting Dorchester tracts");
+    
+  // }
+
   const unsubscribeInvestorType = selectedInvestorType.subscribe(value => {
     investorType = value;
     if (map) updateMapLayers();
@@ -195,6 +236,7 @@ function selectDorchesterTracts() {
         console.log("Map loaded event fired");
         initializeMapLayers();
         updateFillOpacity($selectedCensusTracts);
+        selectDorchesterTracts();
         
         // Add click handler for census tracts
         map.on('click', 'dorchester-fill', (e) => {
@@ -261,6 +303,7 @@ function selectDorchesterTracts() {
       unsubscribeDataScales();
       unsubscribeNeighborhoodsData();
       unsubscribeSelectedCensusTracts();
+
       if (map) map.remove();
       if (legend && legend.parentNode) {
         legend.parentNode.removeChild(legend);
@@ -303,12 +346,7 @@ function selectDorchesterTracts() {
               30, '#d4899e',
               40, '#c06c84'
               ],
-            // 'fill-opacity': [
-            //   'case',
-            //   ['in', ['get', 'tract_id'], ['literal', $selectedCensusTracts]],
-            //   1, // Opacity for selected tracts
-            //   0  // Lower opacity for non-selected tracts
-            // ],
+            
             'fill-outline-color': '#555'
           },
           filter: ['==', '$type', 'Polygon']
@@ -321,7 +359,7 @@ function selectDorchesterTracts() {
           source: 'dorchester-data',
           paint: {
             'line-color': '#333',
-            'line-width': 1
+            'line-width': .5
           },
           filter: ['==', '$type', 'Polygon']
         });
@@ -333,7 +371,7 @@ function selectDorchesterTracts() {
           source: 'dorchester-data',
           paint: {
             'line-color': '#000',
-            'line-width': 2
+            'line-width': 3
           },
           filter: ['all', ['==', '$type', 'Polygon'], ['in', 'tract_id', '']]
         });
@@ -381,7 +419,7 @@ function selectDorchesterTracts() {
           source: 'boston-neighborhoods',
           paint: {
             'line-color': '#000000', // Black border color
-            'line-width': 5          // Thicker border
+            'line-width': 5         // Thicker border
           },
           filter: ['==', 'blockgr2020_ctr_neighb_name', 'Dorchester'] // Ensure this matches the GeoJSON property
         }, 'dorchester-fill'); // Place above the fill layer
