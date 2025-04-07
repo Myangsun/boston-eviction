@@ -62,20 +62,49 @@
   }
   
   .visualization-container {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 2rem;
-    max-width: 1200px;
-    margin: 0 auto;
+    display: flex;
+    flex-direction: row;
+    justify-content: center; /* Center the content horizontally */
+    align-items: stretch; /* Make children stretch to fill height */
+    gap: 20px;
+    margin: 20px auto; /* Center the container with auto margins */
+    max-width: 1200px; /* Maximum width for the container */
+    width: 90%; /* Use 90% of available width */
   }
   
   .map-side, .chart-side {
+    flex: 1; /* Both take equal space */
+    min-height: 500px; /* Taller minimum height */
+    width: 100%; /* Ensure full width in column layout */
+    display: block;
+    position: relative;
+  }
+  
+  /* Make sure the map and chart components take full height of their containers */
+  .map-side :global(.map-container),
+  .chart-side :global(.chart-container) {
+    height: 100%;
+    min-height: 500px;
     width: 100%;
   }
   
-  .section-header {
-    opacity: 1;
-    transform: translateY(0);
+  /* Media query for when screen is narrowed */
+  @media (max-width: 960px) {
+    .visualization-container {
+      flex-direction: column;
+      width: 95%; /* Slightly wider on mobile */
+    }
+    
+    .map-side {
+      order: 1 !important; /* Ensure map is first */
+      margin-bottom: 20px;
+      height: 400px; /* Fixed height for map on mobile */
+    }
+    
+    .chart-side {
+      order: 2 !important; /* Ensure chart is second */
+      height: 400px; /* Fixed height for chart on mobile */
+    }
   }
   
   .section-footer {
@@ -84,17 +113,6 @@
     max-width: 800px;
     margin-left: auto;
     margin-right: auto;
-    opacity: 1;
-    transform: translateY(0);
-  }
-  
-  @media (max-width: 768px) {
-    .visualization-container {
-      grid-template-columns: 1fr;
-    }
-    
-    .year-selector {
-      flex-wrap: wrap;
-    }
+    padding: 0 20px; /* Add padding to prevent text from touching edges on mobile */
   }
 </style>

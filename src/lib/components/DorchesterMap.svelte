@@ -16,6 +16,98 @@
   let boundaries = {};
   let scales = { maxInvestorCount: 0, maxEvictionRate: 0 };
   let neighborhoods = {};
+  const bostonBounds = [
+    [-71.2, 42.2], // Southwest coordinates
+    [-70.9, 42.4]  // Northeast coordinates
+  ];
+
+  // Function to update the fill opacity based on selected tracts
+  function updateFillOpacity(selected) {
+  try {
+    map.setPaintProperty('dorchester-fill', 'fill-opacity', [
+      'case',
+      ['in', ['get', 'tract_id'], ['literal', selected]],
+      1, // Opacity for selected tracts (slightly adjusted for better visibility)
+      0  // Lower opacity for non-selected tracts
+    ]);
+  } catch (error) {
+    console.error("Error updating fill opacity:", error);
+  }
+}
+// Function to select Dorchester census tracts
+function selectDorchesterTracts() {
+    if (!$neighborhoodsData || !$dorchesterData) {
+      console.log("Waiting for data to load...");
+      return;
+    }
+    
+    try {
+      console.log("Finding Dorchester tracts...");
+      
+      // Find Dorchester feature in neighborhoods data
+      const dorchesterFeature = $neighborhoodsData.features.find(
+        f => f.properties.blockgr2020_ctr_neighb_name === 'Dorchester' || 
+             f.properties.name === 'Dorchester'
+      );
+      
+      if (!dorchesterFeature) {
+        console.error("Dorchester boundary not found in neighborhoods data");
+        return;
+      }
+      
+      // Create a Turf polygon for Dorchester
+      let dorchesterPolygon;
+
+      // Handle both single polygon and multipolygon cases
+      if (dorchesterFeature.geometry.type === 'Polygon') {
+        dorchesterPolygon = turf.polygon(dorchesterFeature.geometry.coordinates);
+      } else if (dorchesterFeature.geometry.type === 'MultiPolygon') {
+        // For MultiPolygon, we'll just use the first polygon for simplicity
+        // Or you could use a union operation to combine them all
+        dorchesterPolygon = turf.polygon(dorchesterFeature.geometry.coordinates[0]);
+      } else {
+        console.error("Unsupported geometry type:", dorchesterFeature.geometry.type);
+        return;
+      }
+      
+      // Find all census tracts that are within Dorchester
+      const dorchesterTracts = [];
+      
+      console.log("tracts:", tracts);
+      // Check each tract
+      tracts.forEach(tract => {
+        // Find the corresponding boundary feature
+        const boundaryFeature = $boundaryData.features.find(
+          f => f.properties.geoid === tract.geoid
+        );
+        console.log("boundaryFeature:", boundaryFeature);
+        
+        if (boundaryFeature) {
+          console.log("Processing tract:", tract.tract_id || tract.geoid);
+          try {
+            // Calculate centroid of the tract
+            const centroid = turf.centroid(boundaryFeature);
+            
+            // Check if the centroid is within Dorchester
+            if (turf.booleanPointInPolygon(centroid, dorchesterPolygon)) {
+              dorchesterTracts.push(tract.tract_id || tract.GEOID);
+            }
+          } catch (err) {
+            console.error("Error processing tract:", err);
+          }
+        }
+      });
+
+      console.log(`Found ${dorchesterTracts.length} tracts within Dorchester`);
+      
+      // Set the selected census tracts
+      if (dorchesterTracts.length > 0) {
+        selectedCensusTracts.set(dorchesterTracts);
+      }
+    } catch (error) {
+      console.error("Error selecting Dorchester tracts:", error);
+    }
+  }
   
   const unsubscribeInvestorType = selectedInvestorType.subscribe(value => {
     investorType = value;
@@ -30,6 +122,10 @@
   const unsubscribeDorchesterData = dorchesterData.subscribe(value => {
     tracts = value;
     if (map) updateMapLayers();
+    if (tracts.length > 0 && $neighborhoodsData && Object.keys($neighborhoodsData).length > 0) {
+      // When tract data is loaded, try to select Dorchester tracts
+      selectDorchesterTracts();
+    }
   });
   
   const unsubscribeBoundaryData = boundaryData.subscribe(value => {
@@ -37,10 +133,17 @@
     if (map) updateMapLayers();
   });
   
-  const unsubscribeSelectedTracts = selectedCensusTracts.subscribe(value => {
-    if (map) updateSelectedTracts(value);
-  });
+  // const unsubscribeSelectedTracts = selectedCensusTracts.subscribe(value => {
+  //   if (map) updateSelectedTracts(value);
+  // });
   
+  // // Add a specific subscription for selectedCensusTracts
+  const unsubscribeSelectedCensusTracts = selectedCensusTracts.subscribe(selected => {
+  // When selected tracts change, update the layer opacity
+  if (map && map.getLayer('dorchester-fill')) {
+    updateFillOpacity(selected);
+  }
+});
   const unsubscribeDataScales = dataScales.subscribe(value => {
     scales = value;
     if (map) updateMapLayers();
@@ -49,6 +152,10 @@
   const unsubscribeNeighborhoodsData = neighborhoodsData.subscribe(value => {
     neighborhoods = value;
     if (map) updateMapLayers();
+    if (value && Object.keys(value).length > 0 && map) {
+      // When neighborhoods data is loaded, try to select Dorchester tracts
+      selectDorchesterTracts();
+    }
   });
   
   // Initialize map on component mount
@@ -66,8 +173,9 @@
         style: 'mapbox://styles/mapbox/light-v11',
         center: [-71.0550, 42.3167], // Dorchester approximate center
         // zoom: 14,
-        // minZoom: 13,
-        // maxZoom: 17,
+        minZoom: 10,
+        maxZoom: 18,
+        maxBounds: bostonBounds, 
         interactive: true // Enable map interactions
       });
       
@@ -86,7 +194,7 @@
         // Add sources and layers once map is loaded
         console.log("Map loaded event fired");
         initializeMapLayers();
-
+        updateFillOpacity($selectedCensusTracts);
         
         // Add click handler for census tracts
         map.on('click', 'dorchester-fill', (e) => {
@@ -149,9 +257,10 @@
       unsubscribeYear();
       unsubscribeDorchesterData();
       unsubscribeBoundaryData();
-      unsubscribeSelectedTracts();
+      // unsubscribeSelectedTracts();
       unsubscribeDataScales();
       unsubscribeNeighborhoodsData();
+      unsubscribeSelectedCensusTracts();
       if (map) map.remove();
       if (legend && legend.parentNode) {
         legend.parentNode.removeChild(legend);
@@ -160,7 +269,7 @@
   });
   
   // Initialize map layers
-  async function initializeMapLayers() {
+  function initializeMapLayers() {
     try {
       // // Load Boston neighborhoods GeoJSON
       // const response = await fetch('/data/Boston_Neighborhoods.geojson');
@@ -193,8 +302,14 @@
               20, '#EEB0C2',
               30, '#d4899e',
               40, '#c06c84'
-            ],
-            'fill-opacity': 0.7
+              ],
+            // 'fill-opacity': [
+            //   'case',
+            //   ['in', ['get', 'tract_id'], ['literal', $selectedCensusTracts]],
+            //   1, // Opacity for selected tracts
+            //   0  // Lower opacity for non-selected tracts
+            // ],
+            'fill-outline-color': '#555'
           },
           filter: ['==', '$type', 'Polygon']
         });
@@ -218,11 +333,12 @@
           source: 'dorchester-data',
           paint: {
             'line-color': '#000',
-            'line-width': 1
+            'line-width': 2
           },
           filter: ['all', ['==', '$type', 'Polygon'], ['in', 'tract_id', '']]
         });
-        
+
+              
         // Add eviction circles layer
         map.addLayer({
           id: 'dorchester-evictions',
