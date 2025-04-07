@@ -1,8 +1,9 @@
 <script>
   import { onMount } from 'svelte';
   import mapboxgl from 'mapbox-gl';
-  import { dorchesterData, boundaryData, selectedCensusTracts, selectedInvestorType, selectedYear, dataScales } from '$lib/stores.js';
+  import { dorchesterData, boundaryData, selectedCensusTracts, selectedInvestorType, selectedYear, dataScales, neighborhoodsData } from '$lib/stores.js';
   import { getMapboxToken } from '$lib/mapboxConfig.js';
+  import * as turf from '@turf/turf';
   
   let mapContainer;
   let map;
@@ -14,6 +15,7 @@
   let tracts = [];
   let boundaries = {};
   let scales = { maxInvestorCount: 0, maxEvictionRate: 0 };
+  let neighborhoods = {};
   
   const unsubscribeInvestorType = selectedInvestorType.subscribe(value => {
     investorType = value;
@@ -43,9 +45,14 @@
     scales = value;
     if (map) updateMapLayers();
   });
+
+  const unsubscribeNeighborhoodsData = neighborhoodsData.subscribe(value => {
+    neighborhoods = value;
+    if (map) updateMapLayers();
+  });
   
   // Initialize map on component mount
-  onMount(() => {
+  onMount(async () => {
     console.log("DorchesterMap component mounted");
     
     try {
@@ -58,9 +65,9 @@
         container: mapContainer,
         style: 'mapbox://styles/mapbox/light-v11',
         center: [-71.0550, 42.3167], // Dorchester approximate center
-        zoom: 14,
-        minZoom: 13,
-        maxZoom: 17,
+        // zoom: 14,
+        // minZoom: 13,
+        // maxZoom: 17,
         interactive: true // Enable map interactions
       });
       
@@ -71,10 +78,15 @@
       legend.className = 'map-legend';
       mapContainer.appendChild(legend);
       
-      map.on('load', () => {
-        console.log("Map loaded event fired");
+      map.on('load', async () => {
+        
+        
+        // console.log("Neighborhoods data loaded:", neighborhoodsData);
+        
         // Add sources and layers once map is loaded
+        console.log("Map loaded event fired");
         initializeMapLayers();
+
         
         // Add click handler for census tracts
         map.on('click', 'dorchester-fill', (e) => {
@@ -139,6 +151,7 @@
       unsubscribeBoundaryData();
       unsubscribeSelectedTracts();
       unsubscribeDataScales();
+      unsubscribeNeighborhoodsData();
       if (map) map.remove();
       if (legend && legend.parentNode) {
         legend.parentNode.removeChild(legend);
@@ -147,8 +160,12 @@
   });
   
   // Initialize map layers
-  function initializeMapLayers() {
+  async function initializeMapLayers() {
     try {
+      // // Load Boston neighborhoods GeoJSON
+      // const response = await fetch('/data/Boston_Neighborhoods.geojson');
+      // const neighborhoodsData = await response.json();
+
       console.log("Initializing map layers");
       if (!map.getSource('dorchester-data')) {
         // Add source for census tracts
@@ -159,6 +176,7 @@
             features: []
           }
         });
+         
         
         // Add fill layer for choropleth - updated colors to match new theme
         map.addLayer({
@@ -228,7 +246,65 @@
           },
           filter: ['==', '$type', 'Point']
         });
+
       }
+      console.log("Neighborhoods data:", neighborhoods);
+      // Only add if not already added
+      if (!map.getSource('boston-neighborhoods')) {
+        map.addSource('boston-neighborhoods', {
+          type: 'geojson',
+          data: neighborhoods
+        });
+      }
+
+      // Add the Dorchester border if not already present
+      if (!map.getLayer('dorchester-border')) {
+        map.addLayer({
+          id: 'dorchester-border',
+          type: 'line',
+          source: 'boston-neighborhoods',
+          paint: {
+            'line-color': '#000000', // Black border color
+            'line-width': 5          // Thicker border
+          },
+          filter: ['==', 'blockgr2020_ctr_neighb_name', 'Dorchester'] // Ensure this matches the GeoJSON property
+        }, 'dorchester-fill'); // Place above the fill layer
+
+        // Center the map on Dorchester with padding
+        const dorchesterFeature = neighborhoods.features.find(
+          f => f.properties.blockgr2020_ctr_neighb_name === 'Dorchester'
+        );
+
+        if (dorchesterFeature) {
+          const dorchesterBounds = turf.bbox(dorchesterFeature); // Get bounding box for Dorchester
+          map.fitBounds(dorchesterBounds, {
+            padding: 50, // Add padding around the bounds
+            duration: 1000 // Smooth animation duration in milliseconds
+          });
+       }
+      // Add a label layer for the text "Dorchester"
+      if (!map.getLayer('dorchester-label')) {
+        map.addLayer({
+          id: 'dorchester-label',
+          type: 'symbol',
+          source: 'boston-neighborhoods',
+          layout: {
+            'text-field': 'Dorchester', // Static text
+            'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
+            'text-size': 16,            // Font size
+            'text-anchor': 'center'     // Center the text
+          },
+          paint: {
+            'text-color': '#000000',    // Black text color
+            'text-halo-color': '#FFFFFF', // White halo for better visibility
+            'text-halo-width': 2
+          },
+          filter: ['==', 'blockgr2020_ctr_neighb_name', 'Dorchester'] // Ensure this matches the GeoJSON property
+        });
+      }
+}
+      
+
       
       updateMapLayers();
     } catch (error) {

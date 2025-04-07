@@ -21,6 +21,7 @@ export const scrollProgress = writable(0);
 export const evictionData = writable([]);
 export const boundaryData = writable({});
 export const dorchesterData = writable([]);
+export const neighborhoodsData = writable({});
 
 // Global min/max values for consistent scaling
 export const dataScales = writable({
@@ -36,6 +37,10 @@ export async function loadData() {
     // Load eviction data
     const data = await csv("./data/processed_eviction_data.csv");
     console.log("Loaded eviction data:", data.length);
+
+    // Load Boston neighborhoods GeoJSON
+    const response = await fetch('/data/Boston_Neighborhoods.geojson');
+    const bostonNeighborhoodsData = await response.json();
 
     // Calculate global min/max values for scaling
     const allInvestorCounts = [];
@@ -67,6 +72,10 @@ export async function loadData() {
     // Use all data for both maps, no filtering for Dorchester
     dorchesterData.set(data);
 
+    // Set neighborhoods data
+    neighborhoodsData.set(bostonNeighborhoodsData);
+    console.log("Loaded Boston neighborhoods data:", bostonNeighborhoodsData.features.length);
+
     // Load boundary data - use the Metro_Boston_Census_Tracts.geojson file
     const boundaries = await json("./data/Metro_Boston_Census_Tracts.geojson");
     console.log("Loaded boundary data:", boundaries.features.length);
@@ -87,6 +96,7 @@ export const scatterPlotData = derived(
     selectedYear,
     selectedCensusTracts,
     dataScales,
+
   ],
   ([
     $evictionData,

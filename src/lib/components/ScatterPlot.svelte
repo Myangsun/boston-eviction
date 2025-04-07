@@ -269,6 +269,7 @@
       .style('fill', '#EEB0C2')
       .style('stroke', '#000')
       .style('stroke-width', 1)
+      .style('opacity', 1) // Increase opacity to make points fully visible
       .on('mouseover', function(event, d) {
         d3.select(this).transition()
           .duration(200)

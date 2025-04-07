@@ -13,6 +13,7 @@
   "description": "",
   "dependencies": {
     "@sveltejs/kit": "^1.30.4",
+    "@turf/turf": "^7.2.0",
     "d3": "^7.9.0",
     "mapbox-gl": "^3.11.0",
     "scrollama": "^3.2.0",
