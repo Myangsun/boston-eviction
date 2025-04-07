@@ -39,7 +39,7 @@ export async function loadData() {
     console.log("Loaded eviction data:", data.length);
 
     // Load Boston neighborhoods GeoJSON
-    const response = await fetch('/data/Boston_Neighborhoods.geojson');
+    const response = await fetch("./data/Boston_Neighborhoods.geojson");
     const bostonNeighborhoodsData = await response.json();
 
     // Calculate global min/max values for scaling
@@ -74,7 +74,10 @@ export async function loadData() {
 
     // Set neighborhoods data
     neighborhoodsData.set(bostonNeighborhoodsData);
-    console.log("Loaded Boston neighborhoods data:", bostonNeighborhoodsData.features.length);
+    console.log(
+      "Loaded Boston neighborhoods data:",
+      bostonNeighborhoodsData.features.length
+    );
 
     // Load boundary data - use the Metro_Boston_Census_Tracts.geojson file
     const boundaries = await json("./data/Metro_Boston_Census_Tracts.geojson");
@@ -96,7 +99,6 @@ export const scatterPlotData = derived(
     selectedYear,
     selectedCensusTracts,
     dataScales,
-
   ],
   ([
     $evictionData,
