@@ -39,7 +39,7 @@ export async function loadData() {
     console.log("Loaded eviction data:", data.length);
 
     // Load Boston neighborhoods GeoJSON
-    const response = await fetch('/data/Boston_Neighborhoods.geojson');
+    const response = await fetch('./data/Boston_Neighborhoods.geojson');
     const bostonNeighborhoodsData = await response.json();
 
     // Calculate global min/max values for scaling

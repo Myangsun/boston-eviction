@@ -174,9 +174,6 @@
     if (map) updateMapLayers();
   });
   
-  // const unsubscribeSelectedTracts = selectedCensusTracts.subscribe(value => {
-  //   if (map) updateSelectedTracts(value);
-  // });
   
   // // Add a specific subscription for selectedCensusTracts
   const unsubscribeSelectedCensusTracts = selectedCensusTracts.subscribe(selected => {
