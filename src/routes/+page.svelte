@@ -3,6 +3,7 @@
   import { loadData, evictionData, boundaryData, activeSection, scrollProgress } from '$lib/stores.js';
   import TitleSection from '$lib/components/TitleSection.svelte';
   import NeighborhoodSection from '$lib/components/NeighborhoodSection.svelte';
+  import NeighborhoodSection2 from '$lib/components/NeighborhoodSection2.svelte';
   import CitySection from '$lib/components/CitySection.svelte';
   
   let dataLoaded = false;
@@ -104,6 +105,8 @@
     
     <NeighborhoodSection />
     
+    <NeighborhoodSection2 />
+    
     <CitySection />
     
     <div class="scroll-progress-bar">
@@ -121,6 +124,11 @@
            on:click={() => document.getElementById('neighborhood-section').scrollIntoView({ behavior: 'smooth' })}
            role="button" tabindex="0" on:keydown={(e) => e.key === 'Enter' && document.getElementById('neighborhood-section').scrollIntoView({ behavior: 'smooth' })}>
         <span class="dot-label">Neighborhood</span>
+      </div>
+      <div class="progress-dot" class:active={$activeSection === 'neighborhood2'} 
+            on:click={() => document.getElementById('neighborhood2-section').scrollIntoView({ behavior: 'smooth' })}
+            role="button" tabindex="0" on:keydown={(e) => e.key === 'Enter' && document.getElementById('neighborhood2-section').scrollIntoView({ behavior: 'smooth' })}>
+        <span class="dot-label">Neighborhood2</span>
       </div>
       <div class="progress-line"></div>
       <div class="progress-dot" class:active={$activeSection === 'city'} 
