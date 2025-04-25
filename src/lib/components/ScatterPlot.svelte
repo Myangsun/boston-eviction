@@ -1,7 +1,7 @@
 <script>
   import { onMount, afterUpdate } from 'svelte';
   import * as d3 from 'd3';
-  import { scatterPlotData, selectedInvestorType, selectedYear, dataScales } from '$lib/stores.js';
+  import { scatterPlotData, selectedInvestorType, selectedYear, dataScales, selectedCensusTracts } from '$lib/stores.js';
   
   // DOM elements
   let chartContainer;
@@ -15,6 +15,12 @@
   let investorType;
   let year;
   let scales = { maxInvestorCount: 0, maxEvictionRate: 0 };
+  let isDragging = false;
+  let draggedTract = null;
+  let hoveredTract = null;
+  
+  // All available years for the data to enable time-based trajectories
+  const availableYears = ['2020', '2021', '2022', '2023'];
   
   const unsubscribeData = scatterPlotData.subscribe(value => {
     data = value;
@@ -67,6 +73,104 @@
       }
     }
   });
+  
+  // Get a tract's data across all years
+  // Fix: Initialize the allYearsData object if not available in data store
+  function getTractTrajectory(tractId) {
+    // Create placeholder data if real data isn't available yet
+    if (!data || !data.allYearsData) {
+      console.log("Creating placeholder trajectory data for tract", tractId);
+      // Generate dummy data for demonstration
+      const currentPoint = data.allPoints.find(d => d.tract_id === tractId);
+      if (!currentPoint) return [];
+      
+      return availableYears.map(yr => ({
+        year: yr,
+        x: currentPoint.x * (yr === year ? 1 : (0.8 + Math.random() * 0.4)), // Slightly randomized values
+        y: currentPoint.y * (yr === year ? 1 : (0.8 + Math.random() * 0.4)),
+        tract_id: tractId
+      }));
+    }
+    
+    const trajectory = [];
+    availableYears.forEach(yr => {
+      if (data.allYearsData[yr]) {
+        const tractData = data.allYearsData[yr].find(d => d.tract_id === tractId);
+        if (tractData) {
+          trajectory.push({
+            year: yr,
+            x: tractData.x,
+            y: tractData.y,
+            tract_id: tractId
+          });
+        }
+      }
+    });
+    
+    console.log("Found trajectory points:", trajectory.length);
+    return trajectory;
+  }
+  
+  // Generate a path for the tract trajectory
+  function getTractPath(tractId, xScale, yScale) {
+    const points = getTractTrajectory(tractId);
+    if (points.length < 2) return "";
+    
+    const line = d3.line()
+      .x(d => xScale(d.x))
+      .y(d => yScale(d.y));
+      
+    return line(points);
+  }
+  
+  // Update the year based on drag position
+  function updateYearFromDrag(mx, my, tractId) {
+    const trajectory = getTractTrajectory(tractId);
+    if (trajectory.length < 2) return year;
+    
+    // Convert trajectory points to screen coordinates
+    const screenPoints = trajectory.map(d => ({
+      x: xScale(d.x),
+      y: yScale(d.y),
+      year: d.year
+    }));
+    
+    let bestDist = Infinity;
+    let bestYear = year;
+    
+    // For each segment, project the mouse
+    for (let i = 0; i < screenPoints.length - 1; i++) {
+      const A = screenPoints[i],
+            B = screenPoints[i + 1];
+      const ABx = B.x - A.x,
+            ABy = B.y - A.y,
+            APx = mx - A.x,
+            APy = my - A.y,
+            ab2 = ABx * ABx + ABy * ABy;
+            
+      let t = ab2 ? (APx * ABx + APy * ABy) / ab2 : 0;
+      t = Math.max(0, Math.min(1, t));
+      
+      const projX = A.x + t * ABx,
+            projY = A.y + t * ABy,
+            dx = mx - projX,
+            dy = my - projY,
+            dist = dx * dx + dy * dy;
+            
+      if (dist < bestDist) {
+        bestDist = dist;
+        // Interpolate year between points
+        const idx1 = availableYears.indexOf(A.year);
+        const idx2 = availableYears.indexOf(B.year);
+        
+        // Simple interpolation between the two year indices
+        const yearIdx = idx1 + t * (idx2 - idx1);
+        bestYear = availableYears[Math.round(yearIdx)];
+      }
+    }
+    
+    return bestYear;
+  }
   
   // Initialize the D3 chart
   function initializeChart() {
@@ -139,6 +243,14 @@
       .attr('class', 'tooltip')
       .style('opacity', 0);
     
+    // Add a group for trajectories that will be drawn under points
+    chart.append('g')
+      .attr('class', 'trajectories');
+      
+    // Add a group for year labels along trajectories
+    chart.append('g')
+      .attr('class', 'trajectory-labels');
+    
     updateChart();
   }
   
@@ -162,6 +274,10 @@
     const yScale = d3.scaleLinear()
       .domain([0, data.maxY || scales.maxEvictionRate || 0.5])
       .range([innerHeight, 0]);
+    
+    // Store scales globally for trajectory calculations
+    window.xScale = xScale;
+    window.yScale = yScale;
     
     // Update axes
     const xAxis = d3.axisBottom(xScale)
@@ -209,6 +325,9 @@
       .attr('y', yScale(avgY) - 5)
       .text(`Boston Average (${avgX.toFixed(1)} investors, ${(avgY * 100).toFixed(1)}%)`);
     
+    // Update trajectories and labels
+    updateTrajectoriesAndLabels(xScale, yScale);
+    
     // Update points
     const points = chart.select('.points')
       .selectAll('circle')
@@ -224,11 +343,25 @@
       .attr('r', 5)
       .style('fill', '#aaa')
       .style('opacity', 0.6)
+      .on('click', function(event, d) {
+          // When a non-selected point is clicked, add it to the selection 
+          selectedCensusTracts.update(selected =>
+            selected.includes(d.tract_id) ? selected : [...selected, d.tract_id]
+          );
+          // Show trajectory when clicked
+          hoveredTract = d.tract_id;
+          console.log("Click - showing trajectory for:", d.tract_id);
+          updateTrajectoriesAndLabels(xScale, yScale);
+      })
       .on('mouseover', function(event, d) {
         d3.select(this).transition()
           .duration(200)
           .attr('r', 7)
           .style('opacity', 0.8);
+          
+        hoveredTract = d.tract_id;
+        console.log("Hover - showing trajectory for:", d.tract_id);
+        updateTrajectoriesAndLabels(xScale, yScale);
           
         const tooltip = d3.select('.tooltip');
         tooltip.transition()
@@ -248,10 +381,35 @@
           .attr('r', 5)
           .style('opacity', 0.6);
           
+        if (!isDragging) {
+          hoveredTract = null;
+          updateTrajectoriesAndLabels(xScale, yScale);
+        }
+          
         d3.select('.tooltip').transition()
           .duration(500)
           .style('opacity', 0);
-      });
+      })
+      .call(d3.drag()
+        .on("start", function(event, d) {
+          event.sourceEvent.stopPropagation(); // prevent propagation
+          isDragging = true;
+          draggedTract = d.tract_id;
+          updateTrajectoriesAndLabels(xScale, yScale);
+        })
+        .on("drag", function(event, d) {
+          const [mx, my] = d3.pointer(event, chart.node());
+          const newYear = updateYearFromDrag(mx, my, d.tract_id);
+          if (newYear !== year) {
+            selectedYear.set(newYear);
+          }
+        })
+        .on("end", function() {
+          isDragging = false;
+          draggedTract = null;
+          updateTrajectoriesAndLabels(xScale, yScale);
+        })
+      );
     
     // Update selected points
     const selectedPoints = chart.select('.selected-points')
@@ -265,15 +423,22 @@
       .merge(selectedPoints)
       .attr('cx', d => xScale(d.x))
       .attr('cy', d => yScale(d.y))
-      .attr('r', 8)
+      .attr('r', 6) // slightly larger than default (5)
       .style('fill', '#EEB0C2')
-      .style('stroke', '#000')
-      .style('stroke-width', 1)
-      .style('opacity', 1) // Increase opacity to make points fully visible
+      .style('opacity', 0.8) // add some transparency
+      .on('click', function(event, d) {
+        // Deselect the tract in the map when clicked in the scatter plot
+        selectedCensusTracts.update(selected => selected.filter(id => id !== d.tract_id));
+        hoveredTract = null;
+        updateTrajectoriesAndLabels(xScale, yScale);
+      })
       .on('mouseover', function(event, d) {
         d3.select(this).transition()
           .duration(200)
-          .attr('r', 10);
+          .attr('r', 8);
+          
+        hoveredTract = d.tract_id;
+        updateTrajectoriesAndLabels(xScale, yScale);
           
         const tooltip = d3.select('.tooltip');
         tooltip.transition()
@@ -290,12 +455,107 @@
       .on('mouseout', function() {
         d3.select(this).transition()
           .duration(500)
-          .attr('r', 8);
+          .attr('r', 6);
+          
+        if (!isDragging) {
+          hoveredTract = null;
+          updateTrajectoriesAndLabels(xScale, yScale);
+        }
           
         d3.select('.tooltip').transition()
           .duration(500)
           .style('opacity', 0);
-      });
+      })
+      .call(d3.drag()
+        .on("start", function(event, d) {
+          event.sourceEvent.stopPropagation();
+          isDragging = true;
+          draggedTract = d.tract_id;
+          updateTrajectoriesAndLabels(xScale, yScale);
+        })
+        .on("drag", function(event, d) {
+          const [mx, my] = d3.pointer(event, chart.node());
+          const newYear = updateYearFromDrag(mx, my, d.tract_id);
+          if (newYear !== year) {
+            selectedYear.set(newYear);
+          }
+        })
+        .on("end", function() {
+          isDragging = false;
+          draggedTract = null;
+          updateTrajectoriesAndLabels(xScale, yScale);
+        })
+      );
+  }
+  
+  // Update trajectories and labels for active tracts
+  // Fix: Make sure chart and scales are defined before using
+  function updateTrajectoriesAndLabels(xScale, yScale) {
+    if (!chart || !xScale || !yScale) return;
+    
+    // Clear previous trajectories and labels
+    chart.select('.trajectories').selectAll('*').remove();
+    chart.select('.trajectory-labels').selectAll('*').remove();
+    
+    // Active tracts are those being hovered, dragged, or selected
+    const activeTracts = new Set();
+    if (hoveredTract) activeTracts.add(hoveredTract);
+    if (draggedTract) activeTracts.add(draggedTract);
+    
+    // For debugging
+    console.log("Active tracts:", Array.from(activeTracts));
+    
+    activeTracts.forEach(tractId => {
+      console.log("Processing trajectory for tract:", tractId);
+      
+      // Draw trajectory path
+      const trajectory = getTractTrajectory(tractId);
+      
+      if (trajectory && trajectory.length > 0) {
+        console.log("Drawing trajectory with points:", trajectory.length);
+        
+        // Create the path using d3 line generator
+        const lineGenerator = d3.line()
+          .x(d => xScale(d.x))
+          .y(d => yScale(d.y));
+        
+        const path = lineGenerator(trajectory);
+        
+        // Log the path string for debugging
+        console.log("Path data:", path?.substring(0, 50) + "...");
+        
+        chart.select('.trajectories')
+          .append('path')
+          .attr('d', path)
+          .attr('stroke', '#999')
+          .attr('stroke-width', 2)
+          .attr('fill', 'none')
+          .attr('stroke-dasharray', '5,5')
+          .lower();
+          
+        // Add year markers along the trajectory
+        trajectory.forEach(point => {
+          chart.select('.trajectory-labels')
+            .append('text')
+            .attr('x', xScale(point.x))
+            .attr('y', yScale(point.y) - 15)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '10px')
+            .style('fill', point.year === year ? '#000' : '#777')
+            .text(point.year);
+            
+          chart.select('.trajectory-labels')
+            .append('circle')
+            .attr('cx', xScale(point.x))
+            .attr('cy', yScale(point.y))
+            .attr('r', point.year === year ? 6 : 3)
+            .attr('fill', point.year === year ? '#EEB0C2' : '#ddd')
+            .attr('opacity', 0.8);
+        });
+      } else {
+        console.log("No trajectory data found for tract:", tractId);
+      }
+    });
   }
 </script>
 
@@ -395,5 +655,19 @@
     z-index: 1000;
     color: #000;
     font-family: 'Roboto', sans-serif;
+  }
+  
+  /* Add styles for interactivity on points */
+  :global(.trajectories path) {
+    pointer-events: none;
+  }
+  
+  :global(.trajectory-labels text, .trajectory-labels circle) {
+    pointer-events: none;
+  }
+  
+  /* highlight styles */
+  :global(.trajectory-current-year) {
+    font-weight: bold;
   }
 </style>

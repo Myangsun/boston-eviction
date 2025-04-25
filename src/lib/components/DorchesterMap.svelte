@@ -28,15 +28,15 @@
       'case',
       ['in', ['get', 'tract_id'], ['literal', selected]],
       1, // Opacity for selected tracts (slightly adjusted for better visibility)
-      0  // Lower opacity for non-selected tracts
+       0.3  // Lower opacity for non-selected tracts
     ]);
 
-    // Update line width for tract outlines
+    // Increase selected outline width so outer borders look thicker
     map.setPaintProperty('dorchester-outline', 'line-width', [
       'case',
       ['in', ['get', 'tract_id'], ['literal', selected]],
-      1, // Thicker line for selected tracts
-      0.5  // Thinner line for non-selected tracts
+      1.5, // Thicker outline for selected tracts
+      0.5  // Thinner outline for non-selected tracts
     ]);
     
     // Update line color for better visibility of selected tracts
@@ -210,11 +210,11 @@
         container: mapContainer,
         style: 'mapbox://styles/mapbox/light-v11',
         center: [-71.0550, 42.3167], // Dorchester approximate center
-        // zoom: 14,
+        zoom: 14, // fixed zoom level
         minZoom: 10,
         maxZoom: 18,
         maxBounds: bostonBounds, 
-        interactive: true // Enable map interactions
+        interactive: false // disable all interactions
       });
       
       console.log("Map initialized");
@@ -349,11 +349,14 @@
           filter: ['==', '$type', 'Polygon']
         });
         
-        // Add outline layer
+        // Update outline layer: add line-join to smooth shared borders
         map.addLayer({
           id: 'dorchester-outline',
           type: 'line',
           source: 'dorchester-data',
+          layout: {
+            'line-join': 'round' // Smooth joins for overlapping boundaries
+          },
           paint: {
             'line-color': '#333',
             'line-width': .5
@@ -415,7 +418,7 @@
           type: 'line',
           source: 'boston-neighborhoods',
           paint: {
-            'line-color': '#000000', // Black border color
+            'line-color': '#a04e62', // Black border color
             'line-width': 5         // Thicker border
           },
           filter: ['==', 'blockgr2020_ctr_neighb_name', 'Dorchester'] // Ensure this matches the GeoJSON property
@@ -565,31 +568,10 @@
       // Update legend
       updateLegend();
       
-      // Fit map to census tract boundaries if features exist and map is not being interacted with
-      if (features.length > 0 && !map.isMoving() && !map.isZooming() && !map.isRotating()) {
-        const bounds = new mapboxgl.LngLatBounds();
-        
-        features.forEach(feature => {
-          if (feature.geometry.type === 'Polygon') {
-            feature.geometry.coordinates[0].forEach(coord => {
-              bounds.extend(coord);
-            });
-          } else if (feature.geometry.type === 'MultiPolygon') {
-            feature.geometry.coordinates.forEach(polygon => {
-              polygon[0].forEach(coord => {
-                bounds.extend(coord);
-              });
-            });
-          } else if (feature.geometry.type === 'Point') {
-            bounds.extend(feature.geometry.coordinates);
-          }
-        });
-        
-        map.fitBounds(bounds, {
-          padding: 40,
-          duration: 1000
-        });
-      }
+      // Instead of fitting bounds dynamically, keep the map fixed at Dorchester coordinates.
+      map.setCenter([-71.053, 42.300]);
+      map.setZoom(12);
+      
     } catch (error) {
       console.error("Error updating map layers:", error);
     }
