@@ -1,7 +1,7 @@
 <script>
   import { onMount, afterUpdate } from 'svelte';
   import * as d3 from 'd3';
-  import { scatterPlotData, selectedInvestorType, selectedYear, dataScales, selectedCensusTracts } from '$lib/stores.js';
+  import { scatterPlotData, selectedInvestorType, selectedYear, dataScales, selectedCensusTracts, hoveredCensusTract } from '$lib/stores.js';
   
   // DOM elements
   let chartContainer;
@@ -77,29 +77,18 @@
   // Get a tract's data across all years
   // Fix: Initialize the allYearsData object if not available in data store
   function getTractTrajectory(tractId) {
-    // Create placeholder data if real data isn't available yet
-    if (!data || !data.allYearsData) {
-      console.log("Creating placeholder trajectory data for tract", tractId);
-      // Generate dummy data for demonstration
-      const currentPoint = data.allPoints.find(d => d.tract_id === tractId);
-      if (!currentPoint) return [];
-      
-      return availableYears.map(yr => ({
-        year: yr,
-        x: currentPoint.x * (yr === year ? 1 : (0.8 + Math.random() * 0.4)), // Slightly randomized values
-        y: currentPoint.y * (yr === year ? 1 : (0.8 + Math.random() * 0.4)),
-        tract_id: tractId
-      }));
-    }
+    if (!data || !data.allYearsData) return [];
     
     const trajectory = [];
+    
+    // Use the pre-calculated data for all years
     availableYears.forEach(yr => {
       if (data.allYearsData[yr]) {
         const tractData = data.allYearsData[yr].find(d => d.tract_id === tractId);
         if (tractData) {
           trajectory.push({
             year: yr,
-            x: tractData.x,
+            x: tractData.x, 
             y: tractData.y,
             tract_id: tractId
           });
@@ -107,7 +96,6 @@
       }
     });
     
-    console.log("Found trajectory points:", trajectory.length);
     return trajectory;
   }
   
@@ -359,8 +347,13 @@
           .attr('r', 7)
           .style('opacity', 0.8);
           
+        // Update local hover state
         hoveredTract = d.tract_id;
-        console.log("Hover - showing trajectory for:", d.tract_id);
+        
+        // Highlight the same tract on the map
+        hoveredCensusTract.set(d.tract_id);
+        
+        // Show trajectory
         updateTrajectoriesAndLabels(xScale, yScale);
           
         const tooltip = d3.select('.tooltip');
@@ -383,6 +376,10 @@
           
         if (!isDragging) {
           hoveredTract = null;
+          
+          // Remove highlight on the map
+          hoveredCensusTract.set(null);
+          
           updateTrajectoriesAndLabels(xScale, yScale);
         }
           
@@ -430,6 +427,7 @@
         // Deselect the tract in the map when clicked in the scatter plot
         selectedCensusTracts.update(selected => selected.filter(id => id !== d.tract_id));
         hoveredTract = null;
+        hoveredCensusTract.set(null);
         updateTrajectoriesAndLabels(xScale, yScale);
       })
       .on('mouseover', function(event, d) {
@@ -438,6 +436,7 @@
           .attr('r', 8);
           
         hoveredTract = d.tract_id;
+        hoveredCensusTract.set(d.tract_id);
         updateTrajectoriesAndLabels(xScale, yScale);
           
         const tooltip = d3.select('.tooltip');
@@ -459,6 +458,7 @@
           
         if (!isDragging) {
           hoveredTract = null;
+          hoveredCensusTract.set(null);
           updateTrajectoriesAndLabels(xScale, yScale);
         }
           

@@ -131,11 +131,29 @@ export const scatterPlotData = derived(
     const avgX = totalX / allPoints.length;
     const avgY = totalY / allPoints.length;
 
+    // Create data for all years for trajectories
+    const years = ['2020', '2021', '2022', '2023'];
+    const allYearsData = {};
+    
+    years.forEach(yr => {
+      allYearsData[yr] = $evictionData.map(tract => {
+        return {
+          tract_id: tract.GEOID,
+          x: +tract[`sum_${$selectedInvestorType}_investor`] || 0,
+          y: +tract[`eviction_rate_${yr}`] || 0
+        };
+      }).filter(point => point.y < 1);
+    });
+
     return {
       allPoints,
       bostonAverage: { x: avgX, y: avgY },
       maxX: $dataScales.maxInvestorCount,
       maxY: $dataScales.maxEvictionRate,
+      allYearsData
     };
   }
 );
+
+// New derived store for map hover state
+export const hoveredCensusTract = writable(null);
