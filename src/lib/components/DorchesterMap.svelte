@@ -466,6 +466,20 @@
       }
 }
       
+      // Add a layer for the pulsing effect (will be filtered to show only when needed)
+      if (!map.getLayer('hovered-tract-pulse')) {
+        map.addLayer({
+          id: 'hovered-tract-pulse',
+          type: 'line',
+          source: 'dorchester-data',
+          paint: {
+            'line-color': '#D81B60',
+            'line-width': 4,
+            'line-opacity': 0.8
+          },
+          filter: ['==', 'tract_id', ''] // Initially empty filter
+        });
+      }
 
       
       updateMapLayers();
@@ -693,34 +707,54 @@
     try {
       if (!map || !map.getLayer('dorchester-fill')) return;
       
-      // Reset any previous hover styling
-      map.setPaintProperty('dorchester-fill', 'fill-outline-color', '#555');
-      
       if (tractId) {
-        // Highlight the hovered tract with a thicker, more visible outline
-        map.setPaintProperty('dorchester-fill', 'fill-outline-color', [
-          'case',
-          ['==', ['get', 'tract_id'], tractId],
-          '#000000', // Black outline for hovered tract
-          '#555'     // Default outline color
-        ]);
+        // Do NOT change the fill opacity - maintain what's set by updateFillOpacity
         
+        // Make the hovered tract's border thicker and same color as Dorchester boundary
         map.setPaintProperty('dorchester-outline', 'line-width', [
           'case',
           ['==', ['get', 'tract_id'], tractId],
-          2,      // Thicker for hovered
+          3,      // Much thicker for hovered
           ['in', ['get', 'tract_id'], ['literal', $selectedCensusTracts]],
           1.5,    // Selected tracts
           0.5     // Normal width
         ]);
+        
+        map.setPaintProperty('dorchester-outline', 'line-color', [
+          'case',
+          ['==', ['get', 'tract_id'], tractId],
+          '#a04e62', // Match the Dorchester boundary color
+          ['in', ['get', 'tract_id'], ['literal', $selectedCensusTracts]],
+          '#000000', // Black outline for selected tracts
+          '#555555'  // Gray outline for non-selected tracts
+        ]);
+        
+        // Update the pulsing outline effect
+        if (map.getLayer('hovered-tract-pulse')) {
+          map.setFilter('hovered-tract-pulse', ['==', ['get', 'tract_id'], tractId]);
+          map.setPaintProperty('hovered-tract-pulse', 'line-color', '#a04e62');
+          map.setPaintProperty('hovered-tract-pulse', 'line-width', 4);
+        }
       } else {
-        // Reset to default selected/non-selected styling
+        // When nothing is hovered, go back to normal border style only
         map.setPaintProperty('dorchester-outline', 'line-width', [
           'case',
           ['in', ['get', 'tract_id'], ['literal', $selectedCensusTracts]],
-          1.5,  // Selected tracts
-          0.5   // Normal width
+          1.5,    // Selected tracts
+          0.5     // Normal width
         ]);
+        
+        map.setPaintProperty('dorchester-outline', 'line-color', [
+          'case',
+          ['in', ['get', 'tract_id'], ['literal', $selectedCensusTracts]],
+          '#000000', // Black outline for selected tracts
+          '#555555'  // Gray outline for non-selected tracts
+        ]);
+        
+        // Remove pulse effect
+        if (map.getLayer('hovered-tract-pulse')) {
+          map.setFilter('hovered-tract-pulse', ['==', 'tract_id', '']);
+        }
       }
     } catch (error) {
       console.error("Error highlighting hovered tract:", error);
