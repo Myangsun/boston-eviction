@@ -7,6 +7,9 @@
   // Year selection
   let year;
   
+  // Reference to the DorchesterMap component
+  let dorchesterMapComponent;
+  
   const unsubscribeYear = selectedYear.subscribe(value => {
     year = value;
   });
@@ -21,11 +24,18 @@
       unsubscribeYear();
     };
   });
+  
+  // Export the refreshDorchesterMap function for external access
+  export function refreshDorchesterMap() {
+    if (dorchesterMapComponent && typeof dorchesterMapComponent.refreshDorchesterMap === 'function') {
+      dorchesterMapComponent.refreshDorchesterMap();
+    }
+  }
 </script>
 
 <section id="neighborhood-section" class="section">
   <div class="section-header">
-    <h2>Dorchester Neighborhood Analysis</h2>
+    <h2 class="dorchester-title">Dorchester Neighborhood Analysis</h2>
     <p>Explore the relationship between investor ownership and eviction rates in Dorchester census tracts.</p>
   </div>
   
@@ -38,7 +48,7 @@
   
   <div class="visualization-container">
     <div class="map-side">
-      <DorchesterMap />
+      <DorchesterMap bind:this={dorchesterMapComponent} />
     </div>
     <div class="chart-side">
       <ScatterPlot />
@@ -59,6 +69,18 @@
     margin-bottom: 2rem;
     opacity: 1;
     transform: translateY(0);
+  }
+  
+  /* Adding the Dorchester section title color */
+  .dorchester-title {
+    color: #EEB0C2; /* Pink color for Dorchester */
+  }
+  
+  /* Style the year selector buttons */
+  .year-selector button.active {
+    background-color: #EEB0C2; /* Pink for Dorchester */
+    color: black;
+    border-color: #EEB0C2;
   }
   
   .visualization-container {

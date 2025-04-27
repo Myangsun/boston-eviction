@@ -1,7 +1,7 @@
 <script>
   import { onMount, afterUpdate } from 'svelte';
   import * as d3 from 'd3';
-  import { scatterPlotData, selectedInvestorType, selectedYear, dataScales, selectedCensusTracts, hoveredCensusTract } from '$lib/stores.js';
+  import { scatterPlotData, selectedInvestorType, selectedYear, dataScales, dorchesterSelectedTracts, hoveredCensusTract } from '$lib/stores.js';
   
   // DOM elements
   let chartContainer;
@@ -333,7 +333,7 @@
       .style('opacity', 0.6)
       .on('click', function(event, d) {
           // When a non-selected point is clicked, add it to the selection 
-          selectedCensusTracts.update(selected =>
+          dorchesterSelectedTracts.update(selected =>
             selected.includes(d.tract_id) ? selected : [...selected, d.tract_id]
           );
           // Show trajectory when clicked
@@ -425,7 +425,7 @@
       .style('opacity', 0.8) // add some transparency
       .on('click', function(event, d) {
         // Deselect the tract in the map when clicked in the scatter plot
-        selectedCensusTracts.update(selected => selected.filter(id => id !== d.tract_id));
+        dorchesterSelectedTracts.update(selected => selected.filter(id => id !== d.tract_id));
         hoveredTract = null;
         hoveredCensusTract.set(null);
         updateTrajectoriesAndLabels(xScale, yScale);

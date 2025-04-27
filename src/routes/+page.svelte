@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte';
-  import { loadData, evictionData, boundaryData, activeSection, scrollProgress } from '$lib/stores.js';
+  import { loadData, evictionData, boundaryData, activeSection, scrollProgress, dorchesterSelectedTracts, backbaySelectedTracts } from '$lib/stores.js';
   import TitleSection from '$lib/components/TitleSection.svelte';
   import NeighborhoodSection from '$lib/components/NeighborhoodSection.svelte';
   import NeighborhoodSection2 from '$lib/components/NeighborhoodSection2.svelte';
@@ -8,6 +8,8 @@
   
   let dataLoaded = false;
   let error = null;
+  let backbayMapComponent;
+  let dorchesterMapComponent;
   
   // Load data on component mount
   onMount(async () => {
@@ -87,6 +89,56 @@
       sections[currentSectionIndex + 1].scrollIntoView({ behavior: 'smooth' });
     }
   }
+
+  // Reset the specific neighborhood selection when switching sections
+  function handleSectionChange(newSection) {
+    console.log("Section changed to:", newSection);
+    const previousSection = $activeSection;
+    activeSection.set(newSection);
+    
+    // When entering a neighborhood section, make sure to initialize its selections
+    if (newSection === 'neighborhood') {
+      console.log("Entering Dorchester section, refreshing map");
+      // Clear Back Bay selections completely to avoid interference
+      backbaySelectedTracts.set([]);
+      
+      // Force a robust refresh of the Dorchester map when entering this section
+      if (dorchesterMapComponent && typeof dorchesterMapComponent.refreshDorchesterMap === 'function') {
+        // Give the UI a chance to update first
+        setTimeout(() => {
+          console.log("Calling refreshDorchesterMap");
+          dorchesterMapComponent.refreshDorchesterMap();
+          
+          // Try refreshing again after a delay to make sure it takes effect
+          setTimeout(() => {
+            console.log("Second attempt at refreshDorchesterMap");
+            dorchesterMapComponent.refreshDorchesterMap();
+          }, 500);
+        }, 100);
+      }
+    } else if (newSection === 'neighborhood2') {
+      console.log("Entering Back Bay section, refreshing map");
+      // Clear Dorchester selections completely to avoid interference
+      dorchesterSelectedTracts.set([]);
+      
+      // Force a refresh of the Back Bay map when entering this section
+      if (backbayMapComponent && typeof backbayMapComponent.refreshBackbayMap === 'function') {
+        setTimeout(() => {
+          console.log("Calling refreshBackbayMap");
+          backbayMapComponent.refreshBackbayMap();
+        }, 100);
+      }
+    }
+  }
+
+  // Update the section detection logic to call the new handler
+  function updateSectionVisibility() {
+    // ...existing section detection code...
+    
+    if (currentSection !== $activeSection) {
+      handleSectionChange(currentSection);
+    }
+  }
 </script>
 
 {#if error}
@@ -103,9 +155,9 @@
   <main>
     <TitleSection />
     
-    <NeighborhoodSection />
+    <NeighborhoodSection bind:this={dorchesterMapComponent} />
     
-    <NeighborhoodSection2 />
+    <NeighborhoodSection2 bind:this={backbayMapComponent} />
     
     <CitySection />
     
