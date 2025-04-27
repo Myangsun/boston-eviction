@@ -79,10 +79,6 @@ export async function loadData() {
     const data = await csv("./data/processed_eviction_data.csv");
     console.log("Loaded eviction data:", data.length);
 
-    // Load Back Bay specific data
-    const backbayDataset = await csv("./data/processed_eviction_data_ngh.csv");
-    console.log("Loaded Back Bay data:", backbayDataset.length);
-
     // Load Boston neighborhoods GeoJSON
     const response = await fetch("./data/Boston_Neighborhoods.geojson");
     const bostonNeighborhoodsData = await response.json();
