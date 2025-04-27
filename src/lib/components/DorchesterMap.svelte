@@ -1,7 +1,7 @@
 <script>
   import { onMount } from 'svelte';
   import mapboxgl from 'mapbox-gl';
-  import { dorchesterData, boundaryData, selectedCensusTracts, selectedInvestorType, selectedYear, dataScales, neighborhoodsData } from '$lib/stores.js';
+  import { dorchesterData, boundaryData, selectedCensusTracts, selectedInvestorType, selectedYear, dataScales, neighborhoodsData, hoveredCensusTract } from '$lib/stores.js';
   import { getMapboxToken } from '$lib/mapboxConfig.js';
   import * as turf from '@turf/turf';
   
@@ -28,15 +28,15 @@
       'case',
       ['in', ['get', 'tract_id'], ['literal', selected]],
       1, // Opacity for selected tracts (slightly adjusted for better visibility)
-      0  // Lower opacity for non-selected tracts
+       0.3  // Lower opacity for non-selected tracts
     ]);
 
-    // Update line width for tract outlines
+    // Increase selected outline width so outer borders look thicker
     map.setPaintProperty('dorchester-outline', 'line-width', [
       'case',
       ['in', ['get', 'tract_id'], ['literal', selected]],
-      1, // Thicker line for selected tracts
-      0.5  // Thinner line for non-selected tracts
+      1.5, // Thicker outline for selected tracts
+      0.5  // Thinner outline for non-selected tracts
     ]);
     
     // Update line color for better visibility of selected tracts
@@ -174,9 +174,6 @@
     if (map) updateMapLayers();
   });
   
-  // const unsubscribeSelectedTracts = selectedCensusTracts.subscribe(value => {
-  //   if (map) updateSelectedTracts(value);
-  // });
   
   // // Add a specific subscription for selectedCensusTracts
   const unsubscribeSelectedCensusTracts = selectedCensusTracts.subscribe(selected => {
@@ -199,6 +196,13 @@
     }
   });
   
+  // Add subscription to hoveredCensusTract for highlighting
+  const unsubscribeHoveredTract = hoveredCensusTract.subscribe(tractId => {
+    if (map && map.isStyleLoaded()) {
+      highlightHoveredTract(tractId);
+    }
+  });
+  
   // Initialize map on component mount
   onMount(async () => {
     console.log("DorchesterMap component mounted");
@@ -213,11 +217,11 @@
         container: mapContainer,
         style: 'mapbox://styles/mapbox/light-v11',
         center: [-71.0550, 42.3167], // Dorchester approximate center
-        // zoom: 14,
+        zoom: 14, // fixed zoom level
         minZoom: 10,
         maxZoom: 18,
         maxBounds: bostonBounds, 
-        interactive: true // Enable map interactions
+        interactive: false // disable all interactions
       });
       
       console.log("Map initialized");
@@ -303,6 +307,7 @@
       unsubscribeDataScales();
       unsubscribeNeighborhoodsData();
       unsubscribeSelectedCensusTracts();
+      unsubscribeHoveredTract();
 
       if (map) map.remove();
       if (legend && legend.parentNode) {
@@ -352,11 +357,14 @@
           filter: ['==', '$type', 'Polygon']
         });
         
-        // Add outline layer
+        // Update outline layer: add line-join to smooth shared borders
         map.addLayer({
           id: 'dorchester-outline',
           type: 'line',
           source: 'dorchester-data',
+          layout: {
+            'line-join': 'round' // Smooth joins for overlapping boundaries
+          },
           paint: {
             'line-color': '#333',
             'line-width': .5
@@ -418,7 +426,7 @@
           type: 'line',
           source: 'boston-neighborhoods',
           paint: {
-            'line-color': '#000000', // Black border color
+            'line-color': '#a04e62', // Black border color
             'line-width': 5         // Thicker border
           },
           filter: ['==', 'blockgr2020_ctr_neighb_name', 'Dorchester'] // Ensure this matches the GeoJSON property
@@ -458,6 +466,20 @@
       }
 }
       
+      // Add a layer for the pulsing effect (will be filtered to show only when needed)
+      if (!map.getLayer('hovered-tract-pulse')) {
+        map.addLayer({
+          id: 'hovered-tract-pulse',
+          type: 'line',
+          source: 'dorchester-data',
+          paint: {
+            'line-color': '#D81B60',
+            'line-width': 4,
+            'line-opacity': 0.8
+          },
+          filter: ['==', 'tract_id', ''] // Initially empty filter
+        });
+      }
 
       
       updateMapLayers();
@@ -568,31 +590,10 @@
       // Update legend
       updateLegend();
       
-      // Fit map to census tract boundaries if features exist and map is not being interacted with
-      if (features.length > 0 && !map.isMoving() && !map.isZooming() && !map.isRotating()) {
-        const bounds = new mapboxgl.LngLatBounds();
-        
-        features.forEach(feature => {
-          if (feature.geometry.type === 'Polygon') {
-            feature.geometry.coordinates[0].forEach(coord => {
-              bounds.extend(coord);
-            });
-          } else if (feature.geometry.type === 'MultiPolygon') {
-            feature.geometry.coordinates.forEach(polygon => {
-              polygon[0].forEach(coord => {
-                bounds.extend(coord);
-              });
-            });
-          } else if (feature.geometry.type === 'Point') {
-            bounds.extend(feature.geometry.coordinates);
-          }
-        });
-        
-        map.fitBounds(bounds, {
-          padding: 40,
-          duration: 1000
-        });
-      }
+      // Instead of fitting bounds dynamically, keep the map fixed at Dorchester coordinates.
+      map.setCenter([-71.053, 42.300]);
+      map.setZoom(12);
+      
     } catch (error) {
       console.error("Error updating map layers:", error);
     }
@@ -698,6 +699,65 @@
       map.setFilter('dorchester-selected', ['all', ['==', '$type', 'Polygon'], ['in', 'tract_id', ...selected]]);
     } catch (error) {
       console.error("Error updating selected tracts:", error);
+    }
+  }
+
+  // Function to highlight hovered tract from scatter plot
+  function highlightHoveredTract(tractId) {
+    try {
+      if (!map || !map.getLayer('dorchester-fill')) return;
+      
+      if (tractId) {
+        // Do NOT change the fill opacity - maintain what's set by updateFillOpacity
+        
+        // Make the hovered tract's border thicker and same color as Dorchester boundary
+        map.setPaintProperty('dorchester-outline', 'line-width', [
+          'case',
+          ['==', ['get', 'tract_id'], tractId],
+          3,      // Much thicker for hovered
+          ['in', ['get', 'tract_id'], ['literal', $selectedCensusTracts]],
+          1.5,    // Selected tracts
+          0.5     // Normal width
+        ]);
+        
+        map.setPaintProperty('dorchester-outline', 'line-color', [
+          'case',
+          ['==', ['get', 'tract_id'], tractId],
+          '#a04e62', // Match the Dorchester boundary color
+          ['in', ['get', 'tract_id'], ['literal', $selectedCensusTracts]],
+          '#000000', // Black outline for selected tracts
+          '#555555'  // Gray outline for non-selected tracts
+        ]);
+        
+        // Update the pulsing outline effect
+        if (map.getLayer('hovered-tract-pulse')) {
+          map.setFilter('hovered-tract-pulse', ['==', ['get', 'tract_id'], tractId]);
+          map.setPaintProperty('hovered-tract-pulse', 'line-color', '#a04e62');
+          map.setPaintProperty('hovered-tract-pulse', 'line-width', 4);
+        }
+      } else {
+        // When nothing is hovered, go back to normal border style only
+        map.setPaintProperty('dorchester-outline', 'line-width', [
+          'case',
+          ['in', ['get', 'tract_id'], ['literal', $selectedCensusTracts]],
+          1.5,    // Selected tracts
+          0.5     // Normal width
+        ]);
+        
+        map.setPaintProperty('dorchester-outline', 'line-color', [
+          'case',
+          ['in', ['get', 'tract_id'], ['literal', $selectedCensusTracts]],
+          '#000000', // Black outline for selected tracts
+          '#555555'  // Gray outline for non-selected tracts
+        ]);
+        
+        // Remove pulse effect
+        if (map.getLayer('hovered-tract-pulse')) {
+          map.setFilter('hovered-tract-pulse', ['==', 'tract_id', '']);
+        }
+      }
+    } catch (error) {
+      console.error("Error highlighting hovered tract:", error);
     }
   }
 </script>
