@@ -22,6 +22,9 @@ export const evictionData = writable([]);
 export const boundaryData = writable({});
 export const dorchesterData = writable([]);
 export const neighborhoodsData = writable({});
+export const censusData = writable([])        
+export const currentTheme = writable("investor")
+
 
 // Global min/max values for consistent scaling
 export const dataScales = writable({
@@ -83,6 +86,11 @@ export async function loadData() {
     const boundaries = await json("./data/Metro_Boston_Census_Tracts.geojson");
     console.log("Loaded boundary data:", boundaries.features.length);
     boundaryData.set(boundaries);
+
+    // Load census data
+    const census = await csv("./public/data/census.csv");
+    console.log("Loaded census data:", census.length);
+    censusData.set(census);
 
     return true;
   } catch (error) {
