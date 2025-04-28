@@ -7,9 +7,5 @@ export default defineConfig({
     fs: {
       allow: [".."],
     },
-    base: "./",
-    build: {
-      outDir: "docs", // dump the build right into docs/
-    },
   },
 });
