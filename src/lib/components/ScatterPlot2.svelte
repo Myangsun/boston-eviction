@@ -1,7 +1,17 @@
 <script>
-  import { onMount, afterUpdate } from 'svelte';
+  // Update imports to include backbaySelectedTracts
+  import { 
+    onMount, 
+    afterUpdate 
+  } from 'svelte';
   import * as d3 from 'd3';
-  import { scatterPlotData2, selectedFlipindex, selectedYear, dataScales } from '$lib/stores.js';
+  import { 
+    scatterPlotData2, 
+    selectedFlipindex, 
+    selectedYear, 
+    dataScales,
+    backbaySelectedTracts // Changed from selectedCensusTracts
+  } from '$lib/stores.js';
   
   // DOM elements
   let chartContainer;
@@ -291,6 +301,12 @@
         d3.select('.tooltip').transition()
           .duration(500)
           .style('opacity', 0);
+      })
+      .on('click', function(event, d) {
+        // When a non-selected point is clicked, add it to the Back Bay selection
+        backbaySelectedTracts.update(selected => 
+          selected.includes(d.tract_id) ? selected : [...selected, d.tract_id]
+        );
       });
     
     // Update selected points
@@ -306,7 +322,7 @@
       .attr('cx', d => xScale(d.x))
       .attr('cy', d => yScale(d.y))
       .attr('r', 8)
-      .style('fill', '#EEB0C2')
+      .style('fill', '#88e4cc') // Changed from #EEB0C2 to #88e4cc
       .style('stroke', '#000')
       .style('stroke-width', 1)
       .style('opacity', 1) // Increase opacity to make points fully visible
@@ -335,6 +351,12 @@
         d3.select('.tooltip').transition()
           .duration(500)
           .style('opacity', 0);
+      })
+      .on('click', function(event, d) {
+        // When a selected point is clicked, remove it from the Back Bay selection
+        backbaySelectedTracts.update(selected => 
+          selected.filter(id => id !== d.tract_id)
+        );
       });
   }
 </script>
@@ -355,7 +377,7 @@
    
   </div>
   <div class="chart-explanation">
-    <p>This scatter plot shows the relationship between {Flipindex === 'median_rent' ? 'median rent' : 'median price difference'} and eviction rates in census tracts. Selected tracts are highlighted in pink. The dashed lines show the Boston average.</p>
+    <p>This scatter plot shows the relationship between {Flipindex === 'median_rent' ? 'median rent' : 'median price difference'} and eviction rates in census tracts. Selected tracts are highlighted in teal. The dashed lines show the Boston average.</p>
   </div>
 </div>
 
@@ -402,9 +424,9 @@
   }
   
   button.active {
-    background-color: #EEB0C2;
+    background-color: #88e4cc; /* Changed from #EEB0C2 to #88e4cc */
     color: black;
-    border-color: #EEB0C2;
+    border-color: #88e4cc; /* Changed from #EEB0C2 to #88e4cc */
   }
   
   .chart-explanation {

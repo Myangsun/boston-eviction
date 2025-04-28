@@ -7,6 +7,9 @@
   // Year selection
   let year;
   
+  // Reference to the BackbayMap component
+  let backbayMapComponent;
+  
   const unsubscribeYear = selectedYear.subscribe(value => {
     year = value;
   });
@@ -21,12 +24,19 @@
       unsubscribeYear();
     };
   });
+  
+  // Export the refreshBackbayMap function for external access
+  export function refreshBackbayMap() {
+    if (backbayMapComponent && typeof backbayMapComponent.refreshBackbayMap === 'function') {
+      backbayMapComponent.refreshBackbayMap();
+    }
+  }
 </script>
 
 <section id="neighborhood2-section" class="section">
   <div class="section-header">
-    <h2>Backbay Neighborhood Analysis</h2>
-    <p>Explore the relationship between rent price and flip price difference and eviction rates in Backbay census tracts.</p>
+    <h2 class="backbay-title">Back Bay Neighborhood Analysis</h2>
+    <p>Explore the relationship between rent price and flip price difference and eviction rates in Back Bay census tracts.</p>
   </div>
   
   <div class="year-selector">
@@ -38,7 +48,7 @@
   
   <div class="visualization-container">
     <div class="map-side">
-      <BackbayMap />
+      <BackbayMap bind:this={backbayMapComponent} />
     </div>
     <div class="chart-side">
       <ScatterPlot2 />
@@ -59,6 +69,18 @@
     margin-bottom: 2rem;
     opacity: 1;
     transform: translateY(0);
+  }
+  
+  /* Adding the Back Bay section title color */
+  .backbay-title {
+    color: #88e4cc;
+  }
+  
+  /* Style the year selector buttons */
+  .year-selector button.active {
+    background-color: #88e4cc;
+    color: black;
+    border-color: #88e4cc;
   }
   
   .visualization-container {
