@@ -27,6 +27,9 @@ export const evictionData = writable([]);
 export const boundaryData = writable({});
 export const dorchesterData = writable([]);
 export const neighborhoodsData = writable({});
+export const censusData = writable([])        
+export const currentTheme = writable("investor")
+
 
 // New derived store for map hover state
 export const hoveredCensusTract = writable(null);
@@ -273,6 +276,11 @@ export async function loadData() {
       const fallbackBoundaries = createDefaultBoundaries(data);
       boundaryData.set(fallbackBoundaries);
     }
+
+    // Load census data
+    const census = await csv("./public/data/census.csv");
+    console.log("Loaded census data:", census.length);
+    censusData.set(census);
 
     return true;
   } catch (error) {
