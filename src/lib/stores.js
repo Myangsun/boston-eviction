@@ -95,7 +95,13 @@ export async function loadData() {
     const data = await csv("./data/processed_eviction_data.csv");
     console.log("Loaded eviction data:", data.length);
 
+    // Load Boston neighborhoods GeoJSON
+    const response = await fetch("./data/Boston_Neighborhoods.geojson");
+    const bostonNeighborhoodsData = await response.json();
+
     // Set global scales and normalize tract IDs
+
+    // Calculate global min/max values for scaling
     const allInvestorCounts = [];
     const allEvictionRates = [];
     const allMedianRents = [];
