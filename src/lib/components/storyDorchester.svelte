@@ -4,32 +4,32 @@
     // Story data with 6 scenes
     const storyScenes = [
       {
-        background: '/images/dorchester-1.png',
+        background: 'images/dorchester-1.png',
         text: "I never missed rent. But the building changed hands—and just like that, I was out. <br> — Derrick M., longtime Dorchester resident.*",
         hasPlot: false
       },
       {
-        background: '/images/dorchester-2.png',
+        background: 'images/dorchester-2.png',
         text: 'In recent years, Dorchester has seen a surge in investor ownership — from large holding companies to LLCs with dozens of properties.',
         hasPlot: false
       },
       {
-        background: '/images/dorchester-3.png',
+        background: 'images/dorchester-3.png',
         text: 'From 2020 - 2023, over 181 Dorchester residents faced no-fault eviction filings.',
         hasPlot: true,
-        plotImage: '/images/dorchester-plot1.png'
+        plotImage: 'images/dorchester-plot1.png'
       },
       {
-        background: '/images/dorchester-3.png',
+        background: 'images/dorchester-3.png',
         text: 'These new owners raise rents, displace tenants, and file no-fault evictions at much higher rates comparing to Boston average.',
         hasPlot: true,
-        plotImage: '/images/dorchester-plot2.png'
+        plotImage: 'images/dorchester-plot2.png'
       },
       {
-        background: '/images/dorchester-6.png',
+        background: 'images/dorchester-6.png',
         hasPlot: false,
         isSpecial: true,
-        specialImage: '/images/dorchester-sign.png'
+        specialImage: 'images/dorchester-sign.png'
         },
     ];
     

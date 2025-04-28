@@ -4,37 +4,37 @@
     // Story data with 6 scenes
     const storyScenes = [
       {
-        background: '/images/backbay-1.png',
+        background: 'images/backbay-1.png',
         text: "I thought this neighborhood would be safe. I didn't expect to lose my home this way.<br> — Natalie L., renter in Back Bay since 2016",
         hasPlot: false
       },
       {
-        background: '/images/backbay-2.png',
+        background: 'images/backbay-2.png',
         text: 'Her vision of a stable home fractures, undone by the steady climb of cost.',
         hasPlot: false
       },
       {
-        background: '/images/backbay-2.png',
+        background: 'images/backbay-2.png',
         text: '67% of eviction filings in Back Bay are for non-payment. The rent burden weighs heavily, not just on Natalie.',
         hasPlot: false
       },
       {
-        background: '/images/backbay-3.png',
+        background: 'images/backbay-3.png',
         text: 'In the past twenty years, Back Bay has experienced a constant growth in investor-type transactions.',
         hasPlot: true,
-        plotImage: '/images/backbay-plot1.png'
+        plotImage: 'images/backbay-plot1.png'
       },
       {
-        background: '/images/backbay-3.png',
+        background: 'images/backbay-3.png',
         text: 'Housing as an investment is fueled by increasing returns from property flipping.',
         hasPlot: true,
-        plotImage: '/images/backbay-plot2.png'
+        plotImage: 'images/backbay-plot2.png'
       },
       {
-        background: '/images/backbay-6.png',
+        background: 'images/backbay-6.png',
         hasPlot: false,
         isSpecial: true,
-        specialImage: '/images/backbay-sign.png'
+        specialImage: 'images/backbay-sign.png'
         },
     ];
     
