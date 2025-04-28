@@ -4,37 +4,32 @@
     // Story data with 6 scenes
     const storyScenes = [
       {
-        background: '/images/backbay-1.png',
-        text: "I thought this neighborhood would be safe. I didn't expect to lose my home this way.<br> — Natalie L., renter in Back Bay since 2016",
+        background: '/images/dorchester-1.png',
+        text: "I never missed rent. But the building changed hands—and just like that, I was out. <br> — Derrick M., longtime Dorchester resident.*",
         hasPlot: false
       },
       {
-        background: '/images/backbay-2.png',
-        text: 'Her vision of a stable home fractures, undone by the steady climb of cost.',
+        background: '/images/dorchester-2.png',
+        text: 'In recent years, Dorchester has seen a surge in investor ownership — from large holding companies to LLCs with dozens of properties.',
         hasPlot: false
       },
       {
-        background: '/images/backbay-2.png',
-        text: '67% of eviction filings in Back Bay are for non-payment. The rent burden weighs heavily, not just on Natalie.',
-        hasPlot: false
-      },
-      {
-        background: '/images/backbay-3.png',
-        text: 'In the past twenty years, Back Bay has experienced a constant growth in investor-type transactions.',
+        background: '/images/dorchester-3.png',
+        text: 'From 2020 - 2023, over 181 Dorchester residents faced no-fault eviction filings.',
         hasPlot: true,
-        plotImage: '/images/backbay-plot1.png'
+        plotImage: '/images/dorchester-plot1.png'
       },
       {
-        background: '/images/backbay-3.png',
-        text: 'Housing as an investment is fueled by increasing returns from property flipping.',
+        background: '/images/dorchester-3.png',
+        text: 'These new owners raise rents, displace tenants, and file no-fault evictions at much higher rates comparing to Boston average.',
         hasPlot: true,
-        plotImage: '/images/backbay-plot2.png'
+        plotImage: '/images/dorchester-plot2.png'
       },
       {
-        background: '/images/backbay-6.png',
+        background: '/images/dorchester-6.png',
         hasPlot: false,
         isSpecial: true,
-        specialImage: '/images/backbay-sign.png'
+        specialImage: '/images/dorchester-sign.png'
         },
     ];
     
@@ -129,7 +124,7 @@
               >
                 <img 
                   src={scene.specialImage} 
-                  alt="rent control" 
+                  alt="dorchester not in sale" 
                   class="special-image"
                 />
               </div>
@@ -164,7 +159,7 @@
           {/if}
         </div>
       {/each}
-    </div>handleStoryBackbayExit
+    </div>
   </div>
   
   <style>
@@ -219,12 +214,12 @@
     .text-box {
       position: absolute;
       bottom: 10%;
-      left: 5%;
+      right: 5%;
       width: 470px;
       padding: 20px;
       background: white;
-      border: 3px solid #00D098; /* green border */
-      box-shadow: 5px 5px 0 #00D098; /* green shadow "offset" */
+      border: 3px solid #E56B89; /* green border */
+      box-shadow: 5px 5px 0 #E56B89; /* green shadow "offset" */
       line-height: 1.4;
       pointer-events: auto;
       transform: translateY(100%);
@@ -236,7 +231,7 @@
       font-weight: 700; /* Bold */
       font-size: 1.3125rem; /* 21px */
       line-height: 1.6;
-      color: #00D098;
+      color: #E56B89;
       margin: 0 0 0.5rem 0;
     }
     

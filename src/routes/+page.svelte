@@ -6,6 +6,7 @@
   import NeighborhoodSection2 from '$lib/components/NeighborhoodSection2.svelte';
   import CitySection from '$lib/components/CitySection.svelte';
   import StoryBackbay from '$lib/components/StoryBackbay.svelte';
+  import StoryDorchester from '$lib/components/StoryDorchester.svelte';
 
   let dataLoaded = false;
   let error = null;
@@ -152,6 +153,17 @@
       document.getElementById('neighborhood-section').scrollIntoView({ behavior: 'smooth' });
     }
   }
+  // Add a function to handle exiting the StoryBackbay section
+  function handleStoryDorchesterExit(event) {
+    // If the exit direction is 'bottom', scroll to the next section
+    if (event.detail.direction === 'bottom') {
+      document.getElementById('neighborhood-section').scrollIntoView({ behavior: 'smooth' });
+    } 
+    // If the exit direction is 'top', scroll to the previous section
+    else if (event.detail.direction === 'top') {
+      document.getElementById('title-section').scrollIntoView({ behavior: 'smooth' });
+    }
+  }
 </script>
 
 {#if error}
@@ -167,6 +179,11 @@
 {:else}
   <main>
     <TitleSection />
+
+    <!-- Simply add a section ID to help with navigation -->
+    <section id="story-dorchester-section" class="section">
+      <StoryDorchester/>
+    </section>
     
     <NeighborhoodSection bind:this={dorchesterMapComponent} />
 
