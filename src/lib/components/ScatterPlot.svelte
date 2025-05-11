@@ -39,6 +39,82 @@
     scales = value;
     if (chart) updateChart();
   });
+
+  // Add subscription to hoveredCensusTract for highlighting points from map
+  const unsubscribeHoveredTract = hoveredCensusTract.subscribe(value => {
+    if (chart) {
+      // First, reset all points to normal state
+      chart.selectAll('.points circle, .selected-points circle')
+        .each(function(d) {
+          const circle = d3.select(this);
+          const isSelected = circle.classed('selected-circle') || 
+                            (d && $dorchesterSelectedTracts.includes(d.tract_id));
+          
+          // Use d3's transition performance optimization approach
+          const t = d3.transition().duration(200);
+          
+          circle
+            .transition(t)
+            .attr('r', isSelected ? 8 : 5)
+            .style('opacity', isSelected ? 1 : (hasSelectedTracts() ? 0.3 : 0.6))
+            .style('stroke', 'transparent')
+            .style('stroke-width', 0);
+        });
+      
+      // Then, highlight the hovered tract if any
+      if (value) {
+        chart.selectAll('.points circle, .selected-points circle')
+          .filter(d => d && d.tract_id === value)
+          .transition()
+          .duration(150) // Faster transition for more responsive feel
+          .attr('r', d => $dorchesterSelectedTracts.includes(d.tract_id) ? 10 : 7)
+          .style('opacity', 0.9)
+          .style('stroke', '#EEB0C2')
+          .style('stroke-width', 2);
+          
+        // Also show trajectory for hovered tract
+        hoveredTract = value;
+        updateTrajectoriesAndLabels(window.xScale, window.yScale);
+        
+        // Show tooltip for the hovered tract
+        const hoveredPoint = chart.selectAll('.points circle, .selected-points circle')
+          .filter(d => d && d.tract_id === value);
+        
+        if (!hoveredPoint.empty()) {
+          const pointData = hoveredPoint.datum();
+          const tooltipDiv = d3.select('.tooltip');
+          const xPos = window.xScale(pointData.x);
+          const yPos = window.yScale(pointData.y);
+          
+          // Get chart container position
+          const containerRect = chartContainer.getBoundingClientRect();
+          const tooltipX = containerRect.left + margin.left + xPos + 10;
+          const tooltipY = containerRect.top + margin.top + yPos - 28;
+          
+          tooltipDiv.html(`
+            <strong>Census Tract:</strong> ${pointData.tract_id}<br>
+            <strong>${investorType.charAt(0).toUpperCase() + investorType.slice(1)} Investors:</strong> ${pointData.x}<br>
+            <strong>Eviction Rate:</strong> ${(pointData.y * 100).toFixed(1)}%
+          `)
+          .style('left', tooltipX + 'px')
+          .style('top', tooltipY + 'px')
+          .style('opacity', 0.9);
+        }
+      } else {
+        hoveredTract = null;
+        updateTrajectoriesAndLabels(window.xScale, window.yScale);
+        
+        // Hide tooltip when not hovering
+        d3.select('.tooltip')
+          .style('opacity', 0);
+      }
+    }
+  });
+  
+  // Helper function to check if there are selected tracts
+  function hasSelectedTracts() {
+    return $dorchesterSelectedTracts && $dorchesterSelectedTracts.length > 0;
+  }
   
   // Set investor type
   function setInvestorType(type) {
@@ -56,6 +132,7 @@
       unsubscribeInvestorType();
       unsubscribeYear();
       unsubscribeDataScales();
+      unsubscribeHoveredTract(); // Add this line
       if (chart) chart.selectAll('*').remove();
     };
   });
@@ -316,7 +393,10 @@
     // Update trajectories and labels
     updateTrajectoriesAndLabels(xScale, yScale);
     
-    // Update points
+    // First determine if any tracts are selected to adjust opacity
+    const hasSelectedTracts = $dorchesterSelectedTracts && $dorchesterSelectedTracts.length > 0;
+    
+    // Update points - unselected points
     const points = chart.select('.points')
       .selectAll('circle')
       .data(data.allPoints.filter(d => !d.selected));
@@ -330,7 +410,7 @@
       .attr('cy', d => yScale(d.y))
       .attr('r', 5)
       .style('fill', '#aaa')
-      .style('opacity', 0.6)
+      .style('opacity', hasSelectedTracts ? 0.3 : 0.6) // Lower opacity if any tracts are selected
       .on('click', function(event, d) {
           // When a non-selected point is clicked, add it to the selection 
           dorchesterSelectedTracts.update(selected =>
@@ -338,14 +418,13 @@
           );
           // Show trajectory when clicked
           hoveredTract = d.tract_id;
-          console.log("Click - showing trajectory for:", d.tract_id);
           updateTrajectoriesAndLabels(xScale, yScale);
       })
       .on('mouseover', function(event, d) {
         d3.select(this).transition()
           .duration(200)
           .attr('r', 7)
-          .style('opacity', 0.8);
+          .style('opacity', hasSelectedTracts ? 0.6 : 0.8); // Increase opacity on hover
           
         // Update local hover state
         hoveredTract = d.tract_id;
@@ -372,7 +451,7 @@
         d3.select(this).transition()
           .duration(500)
           .attr('r', 5)
-          .style('opacity', 0.6);
+          .style('opacity', hasSelectedTracts ? 0.3 : 0.6); // Return to normal opacity
           
         if (!isDragging) {
           hoveredTract = null;
@@ -420,9 +499,11 @@
       .merge(selectedPoints)
       .attr('cx', d => xScale(d.x))
       .attr('cy', d => yScale(d.y))
-      .attr('r', 6) // slightly larger than default (5)
+      .attr('r', 8) // Make larger and consistent with ScatterPlot2 (was 6)
       .style('fill', '#EEB0C2')
-      .style('opacity', 0.8) // add some transparency
+      .style('stroke', '#000') // Add stroke to match ScatterPlot2
+      .style('stroke-width', 1) // Add stroke width to match ScatterPlot2
+      .style('opacity', 1) // Full opacity for selected points (was 0.8)
       .on('click', function(event, d) {
         // Deselect the tract in the map when clicked in the scatter plot
         dorchesterSelectedTracts.update(selected => selected.filter(id => id !== d.tract_id));
@@ -433,7 +514,7 @@
       .on('mouseover', function(event, d) {
         d3.select(this).transition()
           .duration(200)
-          .attr('r', 8);
+          .attr('r', 10); // Increase size on hover (was 8)
           
         hoveredTract = d.tract_id;
         hoveredCensusTract.set(d.tract_id);
@@ -454,7 +535,7 @@
       .on('mouseout', function() {
         d3.select(this).transition()
           .duration(500)
-          .attr('r', 6);
+          .attr('r', 8); // Return to normal size (was 6)
           
         if (!isDragging) {
           hoveredTract = null;
@@ -669,5 +750,15 @@
   /* highlight styles */
   :global(.trajectory-current-year) {
     font-weight: bold;
+  }
+
+  /* Highlight the contrast between selected and non-selected points */
+  :global(.points circle) {
+    transition: opacity 0.3s ease, r 0.2s ease;
+  }
+  
+  :global(.selected-points circle) {
+    transition: r 0.2s ease;
+    filter: drop-shadow(0px 0px 3px rgba(0,0,0,0.3)); /* Add subtle shadow to selected points */
   }
 </style>

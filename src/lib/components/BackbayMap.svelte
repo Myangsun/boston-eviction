@@ -1,7 +1,7 @@
 <script>
   import { onMount } from 'svelte';
   import mapboxgl from 'mapbox-gl';
-  import { dorchesterData, boundaryData, selectedCensusTracts, backbaySelectedTracts, selectedFlipindex, selectedYear, dataScales, neighborhoodsData } from '$lib/stores.js';
+  import { dorchesterData, boundaryData, selectedCensusTracts, backbaySelectedTracts, selectedFlipindex, selectedYear, dataScales, neighborhoodsData, hoveredCensusTract } from '$lib/stores.js';
   import { getMapboxToken } from '$lib/mapboxConfig.js';
   import * as turf from '@turf/turf';
   
@@ -28,19 +28,26 @@
   function updateFillOpacity(selected) {
     try {
       console.log("Updating fill opacity for Back Bay tracts:", selected);
-      if (!selected || selected.length === 0) {
-        console.log("No selected tracts to highlight");
+      
+      // Check if map and layers are ready
+      if (!map || !map.getSource('backbay-data') || !map.getLayer('backbay-fill')) {
+        console.log("Map or layers not ready yet");
         return;
       }
       
-      // Apply the filter with multi-condition logic
+      // For clarity about which tracts are being modified
+      const hasSelectedTracts = selected && selected.length > 0;
+      
+      // Apply the fill opacity with multi-condition logic
       map.setPaintProperty('backbay-fill', 'fill-opacity', [
         'case',
+        // If tract is selected, full opacity
         ['in', ['get', 'tract_id'], ['literal', selected]],
-        1.0, // Highest opacity for selected tracts
+        0.9, // Highest opacity for selected tracts
+        // If tract is in Back Bay, medium opacity
         ['==', ['get', 'is_backbay'], true],
-        0.7, // Medium opacity for Back Bay tracts
-        0.2  // Low opacity for other tracts
+        hasSelectedTracts ? 0.4 : 0.7, // Medium opacity for Back Bay tracts (lower if selections exist)
+        hasSelectedTracts ? 0.1 : 0.2  // Low opacity for other tracts (lower if selections exist)
       ]);
 
       // Update line width with multi-condition logic
@@ -323,6 +330,17 @@
       selectBackbayTracts();
     }
   });
+
+  // Add subscription to hoveredCensusTract for highlighting
+  const unsubscribeHoveredTract = hoveredCensusTract.subscribe(tractId => {
+    if (map && map.isStyleLoaded()) {
+      try {
+        highlightHoveredTract(tractId);
+      } catch (error) {
+        console.error("Error in hover tract subscription:", error);
+      }
+    }
+  });
   
   // Initialize map on component mount
   onMount(async () => {
@@ -333,6 +351,13 @@
       const mapboxToken = getMapboxToken();
       mapboxgl.accessToken = mapboxToken;
       console.log("Mapbox token set:", mapboxToken);
+      
+      // Create a single reusable popup outside of event handlers with smooth transitions
+      const popup = new mapboxgl.Popup({
+        closeButton: false,
+        closeOnClick: false,
+        className: 'map-popup-smooth' // Add this class for CSS transitions
+      });
       
       map = new mapboxgl.Map({
         container: mapContainer,
@@ -383,13 +408,17 @@
           }
         });
         
-        // Add popup on hover
-        map.on('mouseenter', 'backbay-fill', (e) => {
+        // Use a single popup instance for better performance with improved hover interaction
+        map.on('mousemove', 'backbay-fill', (e) => {
           if (e.features.length > 0) {
             const feature = e.features[0];
             const tractId = feature.properties.tract_id;
             const indexValue = feature.properties.index_value;
             const evictionRate = feature.properties.eviction_rate;
+            
+            // Update hover state in store to sync with scatter plot
+            hoveredCensusTract.set(tractId);
+            map.getCanvas().style.cursor = 'pointer';
             
             // Format value based on index type
             let formattedValue = '';
@@ -399,32 +428,31 @@
               formattedValue = `$${indexValue.toLocaleString()}`;
             }
             
-            // Create popup
-            new mapboxgl.Popup()
+            // Update existing popup instead of creating a new one
+            popup
               .setLngLat(e.lngLat)
               .setHTML(`
                 <h4>Census Tract</h4>
-                <p>${Flipindex === 'median_rent' ? 'Median Rent' : 'Median Price Difference'}: ${formattedValue}</p>
-                <p>Eviction Rate (${year}): ${(evictionRate * 100).toFixed(1)}%</p>
+                <p><strong>GEOID:</strong> ${tractId}</p>
+                <p><strong>${Flipindex === 'median_rent' ? 'Median Rent' : 'Median Price Difference'}:</strong> ${formattedValue}</p>
+                <p><strong>Eviction Rate (${year}):</strong> ${(evictionRate * 100).toFixed(1)}%</p>
               `)
               .addTo(map);
           }
-          
-          map.getCanvas().style.cursor = 'pointer';
         });
         
         map.on('mouseleave', 'backbay-fill', () => {
           map.getCanvas().style.cursor = '';
-          const popups = document.getElementsByClassName('mapboxgl-popup');
-          if (popups.length) {
-            popups[0].remove();
-          }
+          popup.remove();
+          hoveredCensusTract.set(null); // Clear hover state
         });
       });
       
       map.on('error', (e) => {
         console.error("Map error:", e);
       });
+      
+     
     } catch (error) {
       console.error("Error initializing map:", error);
     }
@@ -439,6 +467,7 @@
       unsubscribeDataScales();
       unsubscribeNeighborhoodsData();
       unsubscribeSelectedCensusTracts();
+      unsubscribeHoveredTract(); // Add this line
 
       if (map) map.remove();
       if (legend && legend.parentNode) {
@@ -472,13 +501,13 @@
               'fill-color': [
                 'interpolate',
                 ['linear'],
-                ['get', 'investor_count'],
-                0, '#e8faef', // Lightest teal
-                10, '#c7f3e0', // Light teal
-                20, '#88e4cc', // Medium teal
-                30, '#58cbad', // Darker teal
-                40, '#2da88a' // Darkest teal
-                ],
+                ['get', 'index_value'],
+                scales.minMedianRent || 400, '#e8faef', // Lightest teal
+                1000, '#c7f3e0', // Light teal
+                2000, '#88e4cc', // Medium teal
+                3000, '#58cbad', // Darker teal
+                scales.maxMedianRent || 3500, '#2da88a' // Darkest teal
+              ],
               
               'fill-outline-color': '#555'
             },
@@ -608,9 +637,23 @@
       }
 }
       
+      // Add a layer for the pulsing effect on hover
+      if (!map.getLayer('backbay-hovered-tract')) {
+        map.addLayer({
+          id: 'backbay-hovered-tract',
+          type: 'line',
+          source: 'backbay-data',
+          paint: {
+            'line-color': '#2da88a',
+            'line-width': 4,
+            'line-opacity': 0.8
+          },
+          filter: ['==', 'tract_id', '']
+        });
+      }
 
       
-      updateMapLayers(true); // Pass true to force filtering by Back Bay only
+      updateMapLayers(false); // CHANGED: Use false to show all tracts by default
     } catch (error) {
       console.error("Error initializing map layers:", error);
     }
@@ -994,6 +1037,84 @@
     }
   }
 
+  // Function to highlight hovered tract from scatter plot
+  function highlightHoveredTract(tractId) {
+    try {
+      if (!map || !map.getLayer('backbay-fill')) return;
+      
+      if (tractId) {
+        // Update the outline properties for the hovered tract
+        map.setPaintProperty('backbay-outline', 'line-width', [
+          'case',
+          ['==', ['get', 'tract_id'], tractId],
+          3,      // Much thicker for hovered
+          ['in', ['get', 'tract_id'], ['literal', $backbaySelectedTracts]],
+          1.5,    // Selected tracts
+          0.5     // Normal width
+        ]);
+        
+        map.setPaintProperty('backbay-outline', 'line-color', [
+          'case',
+          ['==', ['get', 'tract_id'], tractId],
+          '#2da88a', // Match the Back Bay boundary color
+          ['in', ['get', 'tract_id'], ['literal', $backbaySelectedTracts]],
+          '#000000', // Black outline for selected tracts
+          '#555555'  // Gray outline for non-selected tracts
+        ]);
+        
+        // Update fill opacity to emphasize the hovered tract
+        map.setPaintProperty('backbay-fill', 'fill-opacity', [
+          'case',
+          ['==', ['get', 'tract_id'], tractId],
+          0.9,    // Highest opacity for hovered tract
+          ['in', ['get', 'tract_id'], ['literal', $backbaySelectedTracts]],
+          0.8,    // High opacity for selected tracts
+          ['==', ['get', 'is_backbay'], true],
+          0.7,    // Medium opacity for Back Bay tracts
+          0.2     // Low opacity for non-Back Bay tracts
+        ]);
+        
+        // Add a pulsing effect
+        if (map.getLayer('backbay-hovered-tract')) {
+          map.setFilter('backbay-hovered-tract', ['==', ['get', 'tract_id'], tractId]);
+          map.setPaintProperty('backbay-hovered-tract', 'line-opacity', 0.8);
+        }
+      } else {
+        // Reset to normal state when not hovering
+        map.setPaintProperty('backbay-outline', 'line-width', [
+          'case',
+          ['in', ['get', 'tract_id'], ['literal', $backbaySelectedTracts]],
+          1.5,    // Selected tracts
+          0.5     // Normal width
+        ]);
+        
+        map.setPaintProperty('backbay-outline', 'line-color', [
+          'case',
+          ['in', ['get', 'tract_id'], ['literal', $backbaySelectedTracts]],
+          '#000000', // Black outline for selected tracts
+          '#555555'  // Gray outline for non-selected tracts
+        ]);
+        
+        // Reset fill opacity
+        map.setPaintProperty('backbay-fill', 'fill-opacity', [
+          'case',
+          ['in', ['get', 'tract_id'], ['literal', $backbaySelectedTracts]],
+          0.8,    // Selected tracts
+          ['==', ['get', 'is_backbay'], true],
+          0.7,    // Medium opacity for Back Bay tracts
+          0.2     // Low opacity for non-Back Bay tracts
+        ]);
+        
+        // Remove pulse effect
+        if (map.getLayer('backbay-hovered-tract')) {
+          map.setFilter('backbay-hovered-tract', ['==', 'tract_id', '']);
+        }
+      }
+    } catch (error) {
+      console.error("Error highlighting hovered tract:", error);
+    }
+  }
+
   // Add a watcher to re-run selectBackbayTracts when data changes
   $: if (mapInitialized && 
          tracts.length > 0 && 
@@ -1014,8 +1135,8 @@
       // Clear existing selections
       backbaySelectedTracts.set([]);
       
-      // Force update map layers with Back Bay only filter
-      updateMapLayers(true);
+      // Show all tracts by default (false means don't filter to Back Bay only)
+      updateMapLayers(false); // CHANGED: Use false to show all tracts by default
       
       // Re-select Back Bay tracts
       setTimeout(() => {

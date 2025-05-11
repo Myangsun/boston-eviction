@@ -180,6 +180,7 @@
       }
       
       // Create a Turf polygon for Dorchester
+      
       let dorchesterPolygon;
       
       // Handle both single polygon and multipolygon cases
@@ -442,6 +443,12 @@
       mapboxgl.accessToken = mapboxToken;
       console.log("Mapbox token set:", mapboxToken);
       
+      // Create a single reusable popup outside of event handlers
+      const popup = new mapboxgl.Popup({
+        closeButton: false,
+        closeOnClick: false
+      });
+      
       map = new mapboxgl.Map({
         container: mapContainer,
         style: 'mapbox://styles/mapbox/light-v11',
@@ -465,6 +472,9 @@
         
         mapInitialized = true;
         initializeMapLayers();
+        
+        // Add hover interactions after map is initialized
+        addMapHoverInteraction();
         
         // First try to select tracts immediately after map is loaded
         setTimeout(() => {
@@ -493,16 +503,20 @@
           }
         });
         
-        // Add popup on hover
-        map.on('mouseenter', 'dorchester-fill', (e) => {
+        // Use a single popup instance for better performance
+        map.on('mousemove', 'dorchester-fill', (e) => {
           if (e.features.length > 0) {
             const feature = e.features[0];
             const tractId = feature.properties.tract_id;
             const investorCount = feature.properties.investor_count;
             const evictionRate = feature.properties.eviction_rate;
             
-            // Create popup
-            new mapboxgl.Popup()
+            // Update hover state in store to sync with scatter plot
+            hoveredCensusTract.set(tractId);
+            map.getCanvas().style.cursor = 'pointer';
+            
+            // Update existing popup instead of creating a new one
+            popup
               .setLngLat(e.lngLat)
               .setHTML(`
                 <h4>Census Tract</h4>
@@ -512,16 +526,12 @@
               `)
               .addTo(map);
           }
-          
-          map.getCanvas().style.cursor = 'pointer';
         });
         
         map.on('mouseleave', 'dorchester-fill', () => {
           map.getCanvas().style.cursor = '';
-          const popups = document.getElementsByClassName('mapboxgl-popup');
-          if (popups.length) {
-            popups[0].remove();
-          }
+          popup.remove(); // Just remove the popup, don't iterate through DOM
+          hoveredCensusTract.set(null); // Clear hover state
         });
       });
       
@@ -1125,6 +1135,11 @@
          $boundaryData.features.length > 0) {
     console.log("All data is available, selecting Dorchester tracts");
     selectDorchesterTracts();
+  }
+
+  // Remove redundant function since we're now handling this in the mousemove event
+  function addMapHoverInteraction() {
+    // Remove this duplicate function since we now handle hover in the main mousemove event
   }
 </script>
 

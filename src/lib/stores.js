@@ -495,13 +495,50 @@ export const scatterPlotData2 = derived(
       minX = $dataScales.minMedianPriceDiff;
     }
 
+    // Create data for all years for trajectories
+    const years = ['2020', '2021', '2022', '2023'];
+    const allYearsData = {};
+    
+    years.forEach(yr => {
+      allYearsData[yr] = $evictionData
+        .filter(tract => {
+          // Only include tracts with valid data for the selected index
+          let hasValidIndex = false;
+          if ($selectedFlipindex === 'median_rent') {
+            const rent = +tract.median_rent;
+            hasValidIndex = !isNaN(rent) && rent > 0;
+          } else if ($selectedFlipindex === 'median_price_diff') {
+            const diff = +tract.median_price_diff;
+            hasValidIndex = !isNaN(diff);
+          }
+          return hasValidIndex;
+        })
+        .map(tract => {
+          // Get the x value based on selected index
+          let x;
+          if ($selectedFlipindex === 'median_rent') {
+            x = +tract.median_rent;
+          } else {
+            x = Math.min(+tract.median_price_diff, $dataScales.maxMedianPriceDiff);
+          }
+          
+          return {
+            tract_id: tract.GEOID || tract.tract_id,
+            x: x,
+            y: +tract[`eviction_rate_${yr}`] || 0
+          };
+        })
+        .filter(point => point.y < 1);
+    });
+
     return {
       allPoints,
       bostonAverage: { x: avgX, y: avgY },
       maxX,
       minX,
       maxY: $dataScales.maxEvictionRate,
-      minY: 0
+      minY: 0,
+      allYearsData // Add the allYearsData for trajectories
     };
   }
 );
