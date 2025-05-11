@@ -77,6 +77,22 @@
   }
   
   /* Style the year selector buttons */
+  .year-selector button {
+    padding: 0.5rem 1rem;
+    background-color: white;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    color: #000;
+    font-family: 'Roboto', sans-serif;
+  }
+  
+  .year-selector button:hover {
+    background-color: #f5f5f5;
+  }
+  
   .year-selector button.active {
     background-color: #EEB0C2; /* Pink for Dorchester */
     color: black;

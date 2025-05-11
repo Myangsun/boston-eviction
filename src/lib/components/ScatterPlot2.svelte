@@ -113,7 +113,8 @@
         
         // Show tooltip near the point (use either regular or selected point data)
         const pointData = regularPoint.empty() ? 
-          selectedPoint.datum() : regularPoint.datum();
+          (selectedPoint.empty() ? null : selectedPoint.datum()) : 
+          regularPoint.datum();
           
         if (pointData && tooltip) {
           const xPos = window.xScale(pointData.x);
@@ -287,6 +288,7 @@
   // Set Flipindex type
   function setFlipindex(type) {
     selectedFlipindex.set(type);
+    if (chart) updateChart(); // Add this line to ensure chart updates immediately
   }
   
   // Initialize chart on mount

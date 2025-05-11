@@ -615,24 +615,24 @@
             duration: 1000 // Smooth animation duration in milliseconds
           });
        }
-      // Add a label layer for the text "backbay"
+      // Add a label layer for the text "backbay" - Fix the capitalization
       if (!map.getLayer('backbay-label')) {
         map.addLayer({
           id: 'backbay-label',
           type: 'symbol',
           source: 'boston-neighborhoods',
           layout: {
-            'text-field': 'backbay', // Static text
+            'text-field': 'Back Bay', // Fixed: Corrected capitalization 
             'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
-            'text-size': 16,            // Font size
-            'text-anchor': 'center'     // Center the text
+            'text-size': 16,            
+            'text-anchor': 'center'     
           },
           paint: {
-            'text-color': '#000000',    // Black text color
-            'text-halo-color': '#FFFFFF', // White halo for better visibility
+            'text-color': '#000000',    
+            'text-halo-color': '#FFFFFF', 
             'text-halo-width': 2
           },
-          filter: ['==', 'blockgr2020_ctr_neighb_name', 'backbay'] // Ensure this matches the GeoJSON property
+          filter: ['==', 'blockgr2020_ctr_neighb_name', 'Back Bay'] // Fixed: Corrected capitalization 
         });
       }
 }
