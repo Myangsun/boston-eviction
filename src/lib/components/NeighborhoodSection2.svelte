@@ -7,8 +7,9 @@
   // Year selection
   let year;
   
-  // Reference to the BackbayMap component
+  // Reference to components
   let backbayMapComponent;
+  let scatterPlotComponent;
   
   const unsubscribeYear = selectedYear.subscribe(value => {
     year = value;
@@ -19,11 +20,45 @@
   }
   
   onMount(() => {
+    // Add an interaction timer to refresh components after inactivity
+    let lastInteraction = Date.now();
+    const checkInactivity = setInterval(() => {
+      // If it's been more than 60 seconds since last user interaction
+      if (Date.now() - lastInteraction > 60000) {
+        // Refresh both components
+        refreshComponents();
+        lastInteraction = Date.now(); // Reset the timer
+      }
+    }, 30000); // Check every 30 seconds
+    
+    // Track user interaction
+    document.addEventListener('mousemove', () => {
+      lastInteraction = Date.now();
+    });
+    
+    document.addEventListener('click', () => {
+      lastInteraction = Date.now();
+    });
+    
     // Cleanup on component destroy
     return () => {
       unsubscribeYear();
+      clearInterval(checkInactivity);
+      document.removeEventListener('mousemove', () => {});
+      document.removeEventListener('click', () => {});
     };
   });
+  
+  // Combined function to refresh both components
+  function refreshComponents() {
+    // Refresh the map
+    refreshBackbayMap();
+    
+    // Refresh the scatter plot hover state if available
+    if (scatterPlotComponent && typeof scatterPlotComponent.refreshHoverState === 'function') {
+      scatterPlotComponent.refreshHoverState();
+    }
+  }
   
   // Export the refreshBackbayMap function for external access
   export function refreshBackbayMap() {
@@ -51,7 +86,7 @@
       <BackbayMap bind:this={backbayMapComponent} />
     </div>
     <div class="chart-side">
-      <ScatterPlot2 />
+      <ScatterPlot2 bind:this={scatterPlotComponent} />
     </div>
   </div>
   

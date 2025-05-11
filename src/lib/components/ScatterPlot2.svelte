@@ -29,6 +29,10 @@
   let draggedTract = null;
   let hoveredTract = null;
   
+  // Add a keep-alive mechanism for the hover state
+  let lastHoverTimestamp = 0;
+  let hoverCheckInterval;
+  
   // All available years for the data to enable time-based trajectories
   const availableYears = ['2020', '2021', '2022', '2023'];
   
@@ -58,6 +62,8 @@
   
   // Improved hover state handling for syncing with the map
   const unsubscribeHoveredTract = hoveredCensusTract.subscribe(tractId => {
+    lastHoverTimestamp = Date.now(); // Update timestamp whenever a hover event occurs
+    
     if (chart) {
       // Use a single transition instance for better performance
       const t = d3.transition().duration(200);
@@ -328,6 +334,17 @@
           handleHoveredTract($hoveredCensusTract);
         }
       }
+      
+      // Set up a keep-alive interval to check for stale hover states
+      hoverCheckInterval = setInterval(() => {
+        const currentTime = Date.now();
+        // If it's been more than 30 seconds since the last hover event and we have a saved hover state
+        if (currentTime - lastHoverTimestamp > 30000 && $hoveredCensusTract) {
+          // Reapply the current hover state to refresh the visual elements
+          handleHoveredTract($hoveredCensusTract);
+          lastHoverTimestamp = currentTime;
+        }
+      }, 10000); // Check every 10 seconds
     }, 100);
     
     // Cleanup on component destroy
@@ -339,6 +356,7 @@
       unsubscribeEvictionData();
       unsubscribeHoveredTract();
       if (chart) chart.selectAll('*').remove();
+      if (hoverCheckInterval) clearInterval(hoverCheckInterval);
     };
   });
   
@@ -749,6 +767,16 @@
       console.error("Error in handleHoveredTract:", error);
     }
   }
+
+  function refreshHoverState() {
+    if ($hoveredCensusTract) {
+      handleHoveredTract($hoveredCensusTract);
+      lastHoverTimestamp = Date.now(); // Update the timestamp when manually refreshing
+    }
+  }
+
+  // Export the refresh function
+  export { refreshHoverState };
 </script>
 
 <div class="chart-container">
