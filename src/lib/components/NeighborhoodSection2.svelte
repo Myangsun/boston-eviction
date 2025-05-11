@@ -1,17 +1,35 @@
 <script>
   import { onMount } from 'svelte';
-  import { selectedYear } from '$lib/stores.js';
+  import { selectedYear, dataLoading, backbaySelectedTracts } from '$lib/stores.js';
   import BackbayMap from '$lib/components/BackbayMap.svelte';
   import ScatterPlot2 from '$lib/components/ScatterPlot2.svelte';
   
   // Year selection
   let year;
+  let isLoading = true;
   
-  // Reference to the BackbayMap component
+  // Reference to components
   let backbayMapComponent;
+  let scatterPlotComponent;
+  
+  // Track refresh state
+  let initialRefreshPerformed = false;
+  let refreshCounter = 0; // Track how many refreshes have happened
   
   const unsubscribeYear = selectedYear.subscribe(value => {
     year = value;
+  });
+  
+  const unsubscribeLoading = dataLoading.subscribe(value => {
+    isLoading = value;
+  });
+  
+  // Track if Back Bay tracts have been selected
+  const unsubscribeBackbayTracts = backbaySelectedTracts.subscribe(tracts => {
+    // If we have tracts selected, consider the section loaded properly
+    if (tracts && tracts.length > 0) {
+      initialRefreshPerformed = true;
+    }
   });
   
   function setYear(newYear) {
@@ -19,11 +37,66 @@
   }
   
   onMount(() => {
+    // Perform one refresh on mount after a short delay to ensure proper loading
+    if (!initialRefreshPerformed && refreshCounter < 2) {
+      setTimeout(() => {
+        refreshComponents();
+        refreshCounter++;
+        
+        // Try once more if back bay selection is still empty
+        if ($backbaySelectedTracts.length === 0) {
+          setTimeout(() => {
+            refreshComponents();
+            refreshCounter++;
+            initialRefreshPerformed = true;
+          }, 1000);
+        } else {
+          initialRefreshPerformed = true;
+        }
+      }, 500);
+    }
+    
+    // Add an interaction timer to refresh components after inactivity
+    let lastInteraction = Date.now();
+    const checkInactivity = setInterval(() => {
+      // If it's been more than 60 seconds since last user interaction
+      if (Date.now() - lastInteraction > 60000) {
+        // Refresh both components
+        refreshComponents();
+        lastInteraction = Date.now(); // Reset the timer
+      }
+    }, 30000); // Check every 30 seconds
+    
+    // Track user interaction
+    document.addEventListener('mousemove', () => {
+      lastInteraction = Date.now();
+    });
+    
+    document.addEventListener('click', () => {
+      lastInteraction = Date.now();
+    });
+    
     // Cleanup on component destroy
     return () => {
       unsubscribeYear();
+      unsubscribeLoading();
+      unsubscribeBackbayTracts();
+      clearInterval(checkInactivity);
+      document.removeEventListener('mousemove', () => {});
+      document.removeEventListener('click', () => {});
     };
   });
+  
+  // Combined function to refresh both components
+  function refreshComponents() {
+    // Refresh the map
+    refreshBackbayMap();
+    
+    // Refresh the scatter plot hover state if available
+    if (scatterPlotComponent && typeof scatterPlotComponent.refreshHoverState === 'function') {
+      scatterPlotComponent.refreshHoverState();
+    }
+  }
   
   // Export the refreshBackbayMap function for external access
   export function refreshBackbayMap() {
@@ -46,14 +119,21 @@
     <button class:active={year === '2023'} on:click={() => setYear('2023')}>2023</button>
   </div>
   
-  <div class="visualization-container">
-    <div class="map-side">
-      <BackbayMap bind:this={backbayMapComponent} />
+  {#if isLoading}
+    <div class="loading-container">
+      <div class="loader"></div>
+      <p>Loading map and data...</p>
     </div>
-    <div class="chart-side">
-      <ScatterPlot2 />
+  {:else}
+    <div class="visualization-container">
+      <div class="map-side">
+        <BackbayMap bind:this={backbayMapComponent} />
+      </div>
+      <div class="chart-side">
+        <ScatterPlot2 bind:this={scatterPlotComponent} />
+      </div>
     </div>
-  </div>
+  {/if}
   
   <div class="text-box-container">
     <div class="text-box">
@@ -67,6 +147,7 @@
     <div class="text-box">
       <p>Flip difference has a relatively significant positive relationship with eviction rate, suggesting speculative resale activity contributes to displacement risk. This correlation indicates that speculative turnover may drive displacement more than rent levels alone.</p>
     </div>
+
 </section>
 
 <style>
@@ -83,6 +164,7 @@
   .backbay-title {
     color: #88e4cc;
     font-size: 2rem;
+
   }
   
   /* Style the year selector buttons */
@@ -103,7 +185,7 @@
   }
   
   .year-selector button.active {
-    background-color: #88e4cc;
+    background-color: #88e4cc; /* Teal for Back Bay */
     color: black;
     border-color: #88e4cc;
   }
@@ -172,5 +254,30 @@
     font-weight: 600;
     font-size: 1.2rem;
     line-height: 1.5;
+  }
+  
+  /* Add loading styles */
+  .loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 500px;
+    width: 100%;
+  }
+  
+  .loader {
+    border: 5px solid #f3f3f3;
+    border-top: 5px solid #88e4cc; /* Teal for Back Bay */
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    animation: spin 1s linear infinite;
+    margin-bottom: 20px;
+  }
+  
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
   }
 </style>

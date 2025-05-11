@@ -1,17 +1,27 @@
 <script>
   import { onMount } from 'svelte';
-  import { selectedYear } from '$lib/stores.js';
+  import { selectedYear, dataLoading, dataLoadError } from '$lib/stores.js';
   import DorchesterMap from '$lib/components/DorchesterMap.svelte';
   import ScatterPlot from '$lib/components/ScatterPlot.svelte';
   
   // Year selection
   let year;
+  let loading = true;
+  let error = null;
   
   // Reference to the DorchesterMap component
   let dorchesterMapComponent;
   
   const unsubscribeYear = selectedYear.subscribe(value => {
     year = value;
+  });
+  
+  const unsubscribeLoading = dataLoading.subscribe(value => {
+    loading = value;
+  });
+  
+  const unsubscribeError = dataLoadError.subscribe(value => {
+    error = value;
   });
   
   function setYear(newYear) {
@@ -22,6 +32,8 @@
     // Cleanup on component destroy
     return () => {
       unsubscribeYear();
+      unsubscribeLoading();
+      unsubscribeError();
     };
   });
   
@@ -46,14 +58,26 @@
     <button class:active={year === '2023'} on:click={() => setYear('2023')}>2023</button>
   </div>
   
-  <div class="visualization-container">
-    <div class="map-side">
-      <DorchesterMap bind:this={dorchesterMapComponent} />
+  {#if loading}
+    <div class="loading-container">
+      <div class="loader"></div>
+      <p>Loading map and data...</p>
     </div>
-    <div class="chart-side">
-      <ScatterPlot />
+  {:else if error}
+    <div class="error-container">
+      <p>Error loading data: {error}</p>
+      <button on:click={() => window.location.reload()}>Retry</button>
     </div>
-  </div>
+  {:else}
+    <div class="visualization-container">
+      <div class="map-side">
+        <DorchesterMap bind:this={dorchesterMapComponent} />
+      </div>
+      <div class="chart-side">
+        <ScatterPlot />
+      </div>
+    </div>
+  {/if}
   
   <div class="text-box-container">
     <div class="text-box">
@@ -173,5 +197,50 @@
     font-weight: 600;
     font-size: 1.2rem;
     line-height: 1.5;
+  }
+
+  /* Add loading styles */
+  .loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 500px;
+    width: 100%;
+  }
+  
+  .loader {
+    border: 5px solid #f3f3f3;
+    border-top: 5px solid #EEB0C2; /* Pink for Dorchester */
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    animation: spin 1s linear infinite;
+    margin-bottom: 20px;
+  }
+  
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+  
+  .error-container {
+    background-color: #f8d7da;
+    color: #721c24;
+    padding: 20px;
+    border-radius: 8px;
+    margin: 20px auto;
+    max-width: 800px;
+    text-align: center;
+  }
+  
+  .error-container button {
+    background-color: #721c24;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-top: 10px;
   }
 </style>

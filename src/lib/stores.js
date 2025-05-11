@@ -18,6 +18,10 @@ export const visibleLayers = writable({
   evictions: true,
 });
 
+// Add the missing exports for data loading state
+export const dataLoading = writable(true);
+export const dataLoadError = writable(null);
+
 // Scrollytelling state stores
 export const activeSection = writable("title");
 export const scrollProgress = writable(0);
@@ -92,6 +96,10 @@ function normalizeTractId(id) {
 // Load data
 export async function loadData() {
   try {
+    // Update loading state at start of loading
+    dataLoading.set(true);
+    dataLoadError.set(null);
+    
     console.log("Loading data...");
 
     // Load eviction data
@@ -282,9 +290,14 @@ export async function loadData() {
     console.log("Loaded census data:", census.length);
     censusData.set(census);
 
+    // Set loading to false when done
+    dataLoading.set(false);
     return true;
   } catch (error) {
     console.error("Error loading data:", error);
+    // Set error message in case of failure
+    dataLoadError.set(error.message || "Failed to load data");
+    dataLoading.set(false);
     return false;
   }
 }

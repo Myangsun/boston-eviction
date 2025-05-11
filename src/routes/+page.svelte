@@ -8,6 +8,8 @@
     scrollProgress,
     dorchesterSelectedTracts,
     backbaySelectedTracts,
+    dataLoading,
+    dataLoadError,
   } from "$lib/stores.js";
   import TitleSection from "$lib/components/TitleSection.svelte";
   import NeighborhoodSection from "$lib/components/NeighborhoodSection.svelte";
@@ -16,34 +18,41 @@
   import StoryBackbay from "$lib/components/StoryBackbay.svelte";
   import StoryDorchester from "$lib/components/StoryDorchester.svelte";
 
-  let dataLoaded = false;
-  let error = null;
+  let loaded = false;
   let backbayMapComponent;
   let dorchesterMapComponent;
 
-  // Load data on component mount
+  // Use unique variable names to avoid conflicts
+  let isLoading;
+  let loadError;
+
+  // Subscribe to the stores to track loading state
+  const unsubscribeLoading = dataLoading.subscribe(value => {
+    isLoading = value;
+  });
+  
+  const unsubscribeError = dataLoadError.subscribe(value => {
+    loadError = value;
+  });
+
   onMount(async () => {
     try {
-      console.log("Loading data...");
-
-      // Use the loadData function from stores.js to ensure consistent data processing
+      // Try to load data
       const success = await loadData();
-
-      if (!success) {
-        throw new Error("Failed to load data");
+      if (!success && !loadError) {
+        // Only set error if not already set by the store
+        dataLoadError.set("Failed to load required data. Please check your connection and try again.");
       }
-
-      dataLoaded = true;
-
-      // Set up scrolling observer
-      setupScrollObserver();
-
-      // Set up scroll progress tracking
-      setupScrollProgress();
-    } catch (err) {
-      console.error("Error loading data:", err);
-      error = err.message;
+    } catch (e) {
+      console.error("Error during data loading:", e);
+      dataLoadError.set(e.message || "An unexpected error occurred while loading data.");
     }
+
+    return () => {
+      // Clean up subscriptions when component is destroyed
+      unsubscribeLoading();
+      unsubscribeError();
+    };
   });
 
   // Set up intersection observer for scrollytelling
@@ -192,15 +201,16 @@
   }
 </script>
 
-{#if error}
-  <div class="error">
-    <h2>Error loading data</h2>
-    <p>{error}</p>
+{#if isLoading}
+  <div class="loading-container">
+    <div class="loader"></div>
+    <p>Loading data, please wait...</p>
   </div>
-{:else if !dataLoaded}
-  <div class="loading">
-    <h2>Loading data...</h2>
-    <p>Please wait while we load the visualization data.</p>
+{:else if loadError}
+  <div class="error-container">
+    <h2>Data Loading Error</h2>
+    <p>{loadError}</p>
+    <button on:click={() => window.location.reload()}>Retry</button>
   </div>
 {:else}
   <main>
@@ -310,19 +320,14 @@
     position: relative;
   }
 
-  .loading,
-  .error {
-    height: 100vh;
+  .loading-container {
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
+    height: 100vh;
     text-align: center;
     padding: 2rem;
-  }
-
-  .error {
-    color: var(--primary-color);
   }
 
   .scroll-progress-bar {
@@ -402,5 +407,49 @@
     .scroll-progress-dots {
       display: none;
     }
+  }
+
+  .error-container {
+    max-width: 600px;
+    margin: 100px auto;
+    padding: 20px;
+    background-color: #f8d7da;
+    color: #721c24;
+    border-radius: 4px;
+    text-align: center;
+  }
+
+  .error-container button {
+    margin-top: 20px;
+    padding: 8px 16px;
+    background-color: #721c24;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+
+  .loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    width: 100%;
+  }
+
+  .loader {
+    border: 6px solid #f3f3f3;
+    border-top: 6px solid #3498db;
+    border-radius: 50%;
+    width: 60px;
+    height: 60px;
+    animation: spin 2s linear infinite;
+    margin-bottom: 20px;
+  }
+
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
   }
 </style>

@@ -27,13 +27,23 @@
   // Add a flag to track interactions initialization
   let interactionsInitialized = false;
   
-  // Add a debug flag to control console output
-  const DEBUG_MODE = false; // Set to true only when debugging
+  // Add debug flags to control console output and prevent infinite loops
+  const DEBUG_MODE = false;
+  let selectionAttempts = 0;
+  const MAX_SELECTION_ATTEMPTS = 3;
+  let selectionInProgress = false;
+  let lastSelectedTracts = [];
   
   // Function to update the fill opacity based on selected tracts
   function updateFillOpacity(selected) {
     try {
-      console.log("Updating fill opacity for Back Bay tracts:", selected);
+      if (DEBUG_MODE) console.log("Updating fill opacity for Back Bay tracts:", selected);
+      
+      // Prevent unnecessary updates if the selection hasn't changed
+      if (JSON.stringify(selected) === JSON.stringify(lastSelectedTracts)) {
+        return;
+      }
+      lastSelectedTracts = [...selected];
       
       // Check if map and layers are ready
       if (!map || !map.getSource('backbay-data') || !map.getLayer('backbay-fill')) {
@@ -84,19 +94,19 @@
   function ensureDataLoaded() {
     // Check for valid neighborhoods data
     if (!$neighborhoodsData || !$neighborhoodsData.features || !Array.isArray($neighborhoodsData.features)) {
-      console.error("Neighborhoods data is not properly loaded");
+      if (DEBUG_MODE) console.error("Neighborhoods data is not properly loaded");
       return false;
     }
     
     // Check for valid boundary data
     if (!$boundaryData || !$boundaryData.features || !Array.isArray($boundaryData.features)) {
-      console.error("Boundary data is not properly loaded");
+      if (DEBUG_MODE) console.error("Boundary data is not properly loaded");
       return false;
     }
     
     // Check for valid tract data
     if (!tracts || !Array.isArray(tracts) || tracts.length === 0) {
-      console.error("Tract data is not properly loaded");
+      if (DEBUG_MODE) console.error("Tract data is not properly loaded");
       return false;
     }
     
@@ -105,22 +115,22 @@
 
   // Function to select Back Bay census tracts with improved tract ID matching
   function selectBackbayTracts() {
-    console.log("Attempting to select Back Bay tracts");
-    
-    if (!ensureDataLoaded()) {
-      setTimeout(() => selectBackbayTracts(), 1000);
+    // Prevent infinite loops and multiple concurrent selections
+    if (selectionInProgress) {
       return;
     }
     
-    // Check if all required data is available
-    if (!$neighborhoodsData || !$dorchesterData || !$boundaryData || 
-        !$boundaryData.features || $boundaryData.features.length === 0) {
-      console.log("Waiting for all data to load...");
-      console.log("Neighborhoods data:", $neighborhoodsData ? "Loaded" : "Not loaded");
-      console.log("Back Bay data:", $dorchesterData ? "Loaded" : "Not loaded");
-      console.log("Boundary data:", $boundaryData ? 
-                  ($boundaryData.features ? `Loaded with ${$boundaryData.features.length} features` : "Loaded but no features") 
-                  : "Not loaded");
+    selectionAttempts++;
+    if (selectionAttempts > MAX_SELECTION_ATTEMPTS) {
+      console.log(`Max selection attempts (${MAX_SELECTION_ATTEMPTS}) reached, stopping.`);
+      return;
+    }
+    
+    selectionInProgress = true;
+    console.log(`Attempting to select Back Bay tracts (attempt ${selectionAttempts})`);
+    
+    if (!ensureDataLoaded()) {
+      selectionInProgress = false;
       return;
     }
     
@@ -135,6 +145,7 @@
       
       if (!backbayFeature) {
         console.error("Back Bay boundary not found in neighborhoods data");
+        selectionInProgress = false;
         return;
       }
       
@@ -153,6 +164,7 @@
         backbayPolygon = turf.featureCollection(polygons);
       } else {
         console.error("Unsupported geometry type:", backbayFeature.geometry.type);
+        selectionInProgress = false;
         return;
       }
       
@@ -231,34 +243,33 @@
             backbayTracts.push(tractId);
           }
         } catch (err) {
-          console.error(`Error processing tract ${tractId}:`, err);
+          if (DEBUG_MODE) console.error(`Error processing tract ${tractId}:`, err);
         }
       });
       
       // Log a summary instead of individual messages
-      if (missingCount > 0 && !DEBUG_MODE) {
-        console.info(`${missingCount} census tracts were skipped due to missing boundary data.`);
+      if (missingCount > 0) {
+        console.log(`${missingCount} census tracts were skipped due to missing boundary data.`);
       }
       
       console.log(`Found ${backbayTracts.length} tracts within Back Bay`);
       
-      // Set the selected census tracts specifically for Back Bay
-      if (backbayTracts.length > 0) {
+      // Only set tracts if we found some and the selection has changed
+      if (backbayTracts.length > 0 && JSON.stringify(backbayTracts) !== JSON.stringify($backbaySelectedTracts)) {
         console.log("Setting Back Bay selected census tracts to:", backbayTracts);
         
-        // IMPORTANT: Clear current selections first, then set new ones
-        backbaySelectedTracts.set([]);
-        setTimeout(() => {
-          backbaySelectedTracts.set(backbayTracts);
-          
-          // Apply the selection immediately to the map
-          if (map && map.isStyleLoaded() && map.getLayer('backbay-fill')) {
-            updateFillOpacity(backbayTracts);
-          }
-        }, 50);
+        // IMPORTANT: Set directly without the clear+delay pattern that was causing loops
+        backbaySelectedTracts.set(backbayTracts);
+        
+        // Apply the selection immediately to the map
+        if (map && map.isStyleLoaded() && map.getLayer('backbay-fill')) {
+          updateFillOpacity(backbayTracts);
+        }
       }
     } catch (error) {
       console.error("Error selecting Back Bay tracts:", error);
+    } finally {
+      selectionInProgress = false;
     }
   }
 
@@ -302,8 +313,11 @@
   const unsubscribedorchesterData = dorchesterData.subscribe(value => {
     tracts = value;
     if (map) updateMapLayers();
-    if (tracts.length > 0 && $neighborhoodsData && Object.keys($neighborhoodsData).length > 0) {
-      // Standardize to use selectBackbayTracts not selectbackbayTracts
+    
+    // Only attempt to select tracts if we haven't reached the max attempts
+    if (tracts.length > 0 && $neighborhoodsData && 
+        Object.keys($neighborhoodsData).length > 0 &&
+        selectionAttempts < MAX_SELECTION_ATTEMPTS) {
       selectBackbayTracts();
     }
   });
@@ -313,23 +327,19 @@
     if (map) updateMapLayers();
   });
   
-  // const unsubscribeSelectedTracts = selectedCensusTracts.subscribe(value => {
-  //   if (map) updateSelectedTracts(value);
-  // });
-  
-  // // Add a specific subscription for selectedCensusTracts
+  // Modify the subscription to prevent infinite loops
   const unsubscribeSelectedCensusTracts = backbaySelectedTracts.subscribe(selected => {
-  // When selected tracts change, update the layer opacity
-  if (map && map.getLayer('backbay-fill') && map.isStyleLoaded()) {
-    console.log("Tract selection changed, updating map:", selected);
-    if (selected.length === 0) {
-      // If no tracts are selected, refresh the selection from the neighborhood
-      selectBackbayTracts();
-    } else {
-      updateFillOpacity(selected);
+    // Only update the map if selection has changed and is not empty
+    if (selected.length > 0 && JSON.stringify(selected) !== JSON.stringify(lastSelectedTracts)) {
+      lastSelectedTracts = [...selected];
+      
+      if (map && map.getLayer('backbay-fill') && map.isStyleLoaded()) {
+        console.log("Applying Back Bay tract selection to map");
+        updateFillOpacity(selected);
+      }
     }
-  }
-});
+  });
+  
   const unsubscribeDataScales = dataScales.subscribe(value => {
     scales = value;
     if (map) updateMapLayers();
@@ -338,10 +348,6 @@
   const unsubscribeNeighborhoodsData = neighborhoodsData.subscribe(value => {
     neighborhoods = value;
     if (map) updateMapLayers();
-    if (value && Object.keys(value).length > 0 && map) {
-      // Standardize to use selectBackbayTracts not selectbackbayTracts
-      selectBackbayTracts();
-    }
   });
 
   // Add subscription to hoveredCensusTract for highlighting
@@ -357,7 +363,11 @@
   
   // Initialize map on component mount
   onMount(async () => {
-    console.log("backbayMap component mounted");
+    // Reset selection attempts counter on mount
+    selectionAttempts = 0;
+    lastSelectedTracts = [];
+    
+    console.log("BackbayMap component mounted");
     
     try {
       // Get Mapbox token from config
@@ -1151,20 +1161,19 @@
     }
   }
 
-  // Add a watcher to re-run selectBackbayTracts when data changes
+  // Modified watcher to prevent infinite loops
   $: if (mapInitialized && 
          tracts.length > 0 && 
          $neighborhoodsData && 
          Object.keys($neighborhoodsData).length > 0 &&
          $boundaryData && 
          $boundaryData.features && 
-         $boundaryData.features.length > 0) {
-    console.log("All data is available, selecting Back Bay tracts");
+         $boundaryData.features.length > 0 &&
+         selectionAttempts < MAX_SELECTION_ATTEMPTS &&
+         !selectionInProgress) {
+    if (DEBUG_MODE) console.log("All data is available, selecting Back Bay tracts");
     selectBackbayTracts();
   }
-
-
-
 
   // Set up map interactions in a separate function
   function setupMapInteractions(popup) {
@@ -1248,6 +1257,10 @@
   
   // Make sure we refresh the map when component becomes visible
   function refreshBackbayMap() {
+    // Reset counters when manually refreshing
+    selectionAttempts = 0;
+    selectionInProgress = false;
+    
     console.log("Refreshing Back Bay map");
     if (!map) return;
     
@@ -1256,9 +1269,6 @@
       setTimeout(() => refreshBackbayMap(), 200);
       return;
     }
-    
-    // Clear existing selections
-    backbaySelectedTracts.set([]);
     
     // Force the map to update
     updateMapLayers(false);
