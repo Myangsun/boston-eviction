@@ -323,10 +323,11 @@
   .loading-container {
     display: flex;
     flex-direction: column;
-    align-items: center;
     justify-content: center;
+    align-items: center;
     height: 100vh;
-    width: 100%;
+    text-align: center;
+    padding: 2rem;
   }
 
   .scroll-progress-bar {
@@ -426,6 +427,15 @@
     border: none;
     border-radius: 4px;
     cursor: pointer;
+  }
+
+  .loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    width: 100%;
   }
 
   .loader {

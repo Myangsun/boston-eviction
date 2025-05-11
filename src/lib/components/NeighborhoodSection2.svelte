@@ -1,18 +1,35 @@
 <script>
   import { onMount } from 'svelte';
-  import { selectedYear } from '$lib/stores.js';
+  import { selectedYear, dataLoading, backbaySelectedTracts } from '$lib/stores.js';
   import BackbayMap from '$lib/components/BackbayMap.svelte';
   import ScatterPlot2 from '$lib/components/ScatterPlot2.svelte';
   
   // Year selection
   let year;
+  let isLoading = true;
   
   // Reference to components
   let backbayMapComponent;
   let scatterPlotComponent;
   
+  // Track refresh state
+  let initialRefreshPerformed = false;
+  let refreshCounter = 0; // Track how many refreshes have happened
+  
   const unsubscribeYear = selectedYear.subscribe(value => {
     year = value;
+  });
+  
+  const unsubscribeLoading = dataLoading.subscribe(value => {
+    isLoading = value;
+  });
+  
+  // Track if Back Bay tracts have been selected
+  const unsubscribeBackbayTracts = backbaySelectedTracts.subscribe(tracts => {
+    // If we have tracts selected, consider the section loaded properly
+    if (tracts && tracts.length > 0) {
+      initialRefreshPerformed = true;
+    }
   });
   
   function setYear(newYear) {
@@ -20,6 +37,25 @@
   }
   
   onMount(() => {
+    // Perform one refresh on mount after a short delay to ensure proper loading
+    if (!initialRefreshPerformed && refreshCounter < 2) {
+      setTimeout(() => {
+        refreshComponents();
+        refreshCounter++;
+        
+        // Try once more if back bay selection is still empty
+        if ($backbaySelectedTracts.length === 0) {
+          setTimeout(() => {
+            refreshComponents();
+            refreshCounter++;
+            initialRefreshPerformed = true;
+          }, 1000);
+        } else {
+          initialRefreshPerformed = true;
+        }
+      }, 500);
+    }
+    
     // Add an interaction timer to refresh components after inactivity
     let lastInteraction = Date.now();
     const checkInactivity = setInterval(() => {
@@ -43,6 +79,8 @@
     // Cleanup on component destroy
     return () => {
       unsubscribeYear();
+      unsubscribeLoading();
+      unsubscribeBackbayTracts();
       clearInterval(checkInactivity);
       document.removeEventListener('mousemove', () => {});
       document.removeEventListener('click', () => {});
@@ -81,18 +119,25 @@
     <button class:active={year === '2023'} on:click={() => setYear('2023')}>2023</button>
   </div>
   
-  <div class="visualization-container">
-    <div class="map-side">
-      <BackbayMap bind:this={backbayMapComponent} />
+  {#if isLoading}
+    <div class="loading-container">
+      <div class="loader"></div>
+      <p>Loading map and data...</p>
     </div>
-    <div class="chart-side">
-      <ScatterPlot2 bind:this={scatterPlotComponent} />
+  {:else}
+    <div class="visualization-container">
+      <div class="map-side">
+        <BackbayMap bind:this={backbayMapComponent} />
+      </div>
+      <div class="chart-side">
+        <ScatterPlot2 bind:this={scatterPlotComponent} />
+      </div>
     </div>
-  </div>
+  {/if}
   
   <div class="section-footer">
-    <p>Click on census tracts in the map to highlight them in the scatter plot. Use the buttons above to change the year and investor type.</p>
-    <p>The data reveals a correlation between areas with high investor ownership and increased eviction rates, particularly in the most recent years.</p>
+    <p>Click on census tracts in the map to highlight them in the scatter plot. Use the buttons above to change the year and flip index type.</p>
+    <p>The data reveals correlations between housing price indicators and eviction rates in Back Bay census tracts.</p>
   </div>
 </section>
 
@@ -108,7 +153,7 @@
   
   /* Adding the Back Bay section title color */
   .backbay-title {
-    color: #88e4cc;
+    color: #88e4cc; /* Teal color for Back Bay */
   }
   
   /* Style the year selector buttons */
@@ -129,7 +174,7 @@
   }
   
   .year-selector button.active {
-    background-color: #88e4cc;
+    background-color: #88e4cc; /* Teal for Back Bay */
     color: black;
     border-color: #88e4cc;
   }
@@ -187,5 +232,30 @@
     margin-left: auto;
     margin-right: auto;
     padding: 0 20px; /* Add padding to prevent text from touching edges on mobile */
+  }
+  
+  /* Add loading styles */
+  .loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 500px;
+    width: 100%;
+  }
+  
+  .loader {
+    border: 5px solid #f3f3f3;
+    border-top: 5px solid #88e4cc; /* Teal for Back Bay */
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    animation: spin 1s linear infinite;
+    margin-bottom: 20px;
+  }
+  
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
   }
 </style>

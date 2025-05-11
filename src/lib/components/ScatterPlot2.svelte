@@ -458,11 +458,26 @@
       .style('pointer-events', 'none') // Prevent tooltip from capturing mouse events
       .style('transition', 'opacity 0.15s ease'); // Add smooth transition
     
+    // Reset update count after initialization
+    updateCount = 0;
+    // Call updateChart once at initialization
     updateChart();
   }
   
+  // Add state to track if the chart was already updated
+  let chartUpdated = false;
+  let updateCount = 0;
+  const MAX_UPDATES = 2; // Limit the number of updates
+
   // Update the chart with new data
   function updateChart() {
+    // Prevent excessive updates
+    if (!chartInitialized || updateCount >= MAX_UPDATES) {
+      return;
+    }
+
+    updateCount++;
+    
     if (!chart || !data || !data.allPoints || !data.allPoints.length) {
       console.log("Cannot update chart - missing data or chart not ready");
       return;
