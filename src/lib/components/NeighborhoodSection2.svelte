@@ -74,6 +74,7 @@
   /* Adding the Back Bay section title color */
   .backbay-title {
     color: #88e4cc;
+    font-size: 2rem;
   }
   
   /* Style the year selector buttons */
