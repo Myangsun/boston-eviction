@@ -72,10 +72,9 @@
         
       chart.selectAll('.selected-points circle')
         .transition(t)
-        .attr('r', 8)
+        .attr('r', 5) // Update to consistent size (was 8)
         .style('opacity', 1)
-        .style('stroke', '#000')
-        .style('stroke-width', 1);
+        .style('stroke', 'none'); // No outline for selected points
       
       // Then highlight the hovered tract if any
       if (tractId) {
@@ -93,7 +92,7 @@
             .duration(150)
             .attr('r', 7)
             .style('opacity', 0.9)
-            .style('stroke', '#2da88a')
+            .style('stroke', '#2da88a') // Add stroke only on hover
             .style('stroke-width', 2);
         }
         
@@ -102,8 +101,8 @@
           selectedPoint
             .transition()
             .duration(150)
-            .attr('r', 10)
-            .style('stroke', '#000')
+            .attr('r', 7) // Same hover size (was 10)
+            .style('stroke', '#2da88a') // Add stroke for selected when hovered
             .style('stroke-width', 2);
         }
         

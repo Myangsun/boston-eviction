@@ -44,22 +44,20 @@
   const unsubscribeHoveredTract = hoveredCensusTract.subscribe(value => {
     if (chart) {
       // First, reset all points to normal state
-      chart.selectAll('.points circle, .selected-points circle')
-        .each(function(d) {
-          const circle = d3.select(this);
-          const isSelected = circle.classed('selected-circle') || 
-                            (d && $dorchesterSelectedTracts.includes(d.tract_id));
-          
-          // Use d3's transition performance optimization approach
-          const t = d3.transition().duration(200);
-          
-          circle
-            .transition(t)
-            .attr('r', isSelected ? 8 : 5)
-            .style('opacity', isSelected ? 1 : (hasSelectedTracts() ? 0.3 : 0.6))
-            .style('stroke', 'transparent')
-            .style('stroke-width', 0);
-        });
+      chart.selectAll('.points circle')
+        .transition()
+        .duration(200)
+        .attr('r', 5)
+        .style('opacity', hasSelectedTracts() ? 0.3 : 0.6)
+        .style('stroke', 'transparent')
+        .style('stroke-width', 0);
+      
+      chart.selectAll('.selected-points circle')
+        .transition()
+        .duration(200)
+        .attr('r', 5) // Update to consistent size (was 8)
+        .style('opacity', 1)
+        .style('stroke', 'none'); // No outline for selected points
       
       // Then, highlight the hovered tract if any
       if (value) {
@@ -67,9 +65,9 @@
           .filter(d => d && d.tract_id === value)
           .transition()
           .duration(150) // Faster transition for more responsive feel
-          .attr('r', d => $dorchesterSelectedTracts.includes(d.tract_id) ? 10 : 7)
+          .attr('r', 7) // Consistent hover size (was 10 for selected)
           .style('opacity', 0.9)
-          .style('stroke', '#EEB0C2')
+          .style('stroke', '#EEB0C2') // Add stroke only on hover
           .style('stroke-width', 2);
           
         // Also show trajectory for hovered tract
@@ -583,6 +581,8 @@
     if (hoveredTract) activeTracts.add(hoveredTract);
     if (draggedTract) activeTracts.add(draggedTract);
     
+    if (draggedTract) activeTracts.add(draggedTract);
+    
     // For debugging
     console.log("Active tracts:", Array.from(activeTracts));
     
@@ -759,6 +759,5 @@
   
   :global(.selected-points circle) {
     transition: r 0.2s ease;
-    filter: drop-shadow(0px 0px 3px rgba(0,0,0,0.3)); /* Add subtle shadow to selected points */
-  }
-</style>
+    filter: drop-shadow(0px 0px 2px rgba(0,0,0,0.5)); /* Add drop shadow */
+  }</style>
