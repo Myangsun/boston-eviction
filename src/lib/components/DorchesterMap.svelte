@@ -227,8 +227,7 @@
         const tractId = tract.tract_id || tract.GEOID || tract.geoid;
         
         if (!tractId) {
-          console.debug("Tract missing ID:", tract);
-          return; // Skip this tract
+          return; // Skip this tract silently
         }
         
         // Avoid processing the same tract multiple times
@@ -241,12 +240,8 @@
         const boundaryFeature = findBoundaryFeature(tractId, tractIdToBoundary);
         
         if (!boundaryFeature) {
-          if (!missingBoundaries.has(tractId)) {
-            // Use debug instead of warn to reduce console noise
-            console.debug(`No boundary found for tract: ${tractId}`);
-            missingBoundaries.add(tractId);
-          }
-          return; // Skip this tract
+          // Simply skip this tract silently
+          return;
         }
         
         try {
@@ -272,7 +267,7 @@
             dorchesterTracts.push(tractId);
           }
         } catch (err) {
-          console.error(`Error processing tract ${tractId}:`, err);
+          // Skip this tract on error
         }
       });
       
@@ -841,15 +836,11 @@
       tracts.forEach(tract => {
         const tractId = tract.GEOID || tract.tract_id || tract.geoid;
         
-        // Find boundary with flexible matching
+        // Find boundary with flexible matching - skip if not found
         const boundaryFeature = findBoundaryFeature(tractId, tractIdToBoundary);
         
         if (!boundaryFeature) {
-          if (!missingBoundaries.has(tractId)) {
-            console.debug(`No boundary for tract ID: ${tractId}`);
-            missingBoundaries.add(tractId);
-          }
-          return; // Skip this tract
+          return; // Skip this tract silently
         }
         
         // Calculate centroid for the eviction circle

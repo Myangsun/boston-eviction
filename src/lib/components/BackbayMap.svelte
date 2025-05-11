@@ -24,6 +24,9 @@
   // Ensure map is fully initialized before attempting to select tracts
   let mapInitialized = false;
   
+  // Add a flag to track interactions initialization
+  let interactionsInitialized = false;
+  
   // Function to update the fill opacity based on selected tracts
   function updateFillOpacity(selected) {
     try {
@@ -363,12 +366,16 @@
         container: mapContainer,
         style: 'mapbox://styles/mapbox/light-v11',
         center: [-71.0550, 42.3167], // backbay approximate center
-        // zoom: 14,
+        zoom: 13, // Set appropriate initial zoom level
         minZoom: 10,
         maxZoom: 18,
         maxBounds: bostonBounds, 
-        interactive: true // Enable map interactions
+        interactive: true, // Ensure interactive is explicitly set to true
+        attributionControl: false // Hide attribution for cleaner UI
       });
+      
+      // Add navigation controls to make the map more visibly interactive
+      map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'top-right');
       
       console.log("Map initialized");
       
@@ -376,6 +383,16 @@
       legend = document.createElement('div');
       legend.className = 'map-legend';
       mapContainer.appendChild(legend);
+      
+      // Force focus on map container to ensure it catches events immediately
+      mapContainer.focus();
+      
+      // Make map interactive immediately
+      map.on('style.load', () => {
+        console.log("Map style loaded - setting up interactions");
+        setupMapInteractions(popup);
+        interactionsInitialized = true;
+      });
       
       map.on('load', async () => {
         console.log("Map loaded event fired");
@@ -385,6 +402,11 @@
         
         // Standardize to use selectBackbayTracts not selectbackbayTracts
         selectBackbayTracts();
+        
+        if (!interactionsInitialized) {
+          setupMapInteractions(popup);
+          interactionsInitialized = true;
+        }
         
         // Wait for a brief moment after map initialization, then try again
         setTimeout(() => {
@@ -452,6 +474,16 @@
         console.error("Map error:", e);
       });
       
+      // Add a direct click handler on the map container to ensure focus
+      mapContainer.addEventListener('click', () => {
+        mapContainer.focus();
+      });
+      
+      // Simulate a click on the map after a short delay to ensure focus
+      setTimeout(() => {
+        mapContainer.click();
+        mapContainer.focus();
+      }, 200);
      
     } catch (error) {
       console.error("Error initializing map:", error);
@@ -749,7 +781,6 @@
       
       // Create GeoJSON features from tract data by joining with boundary data
       const features = [];
-      const missingBoundaries = new Set(); // Track missing boundaries
       
       // Loop through all census tracts
       tracts.forEach(tract => {
@@ -763,14 +794,9 @@
         // Find boundary with flexible matching
         const boundaryFeature = findBoundaryFeature(tractId, tractIdToBoundary);
         
+        // If no boundary found, simply skip this tract silently (no error logging)
         if (!boundaryFeature) {
-          // Only log each missing tract once
-          if (!missingBoundaries.has(tractId)) {
-            // Use debug level instead of warn to reduce console noise
-            console.debug(`No boundary for tract ID: ${tractId}`);
-            missingBoundaries.add(tractId);
-          }
-          return; // Skip this tract
+          return;
         }
         
         // Calculate centroid for the eviction circle
@@ -1127,29 +1153,138 @@
     selectBackbayTracts();
   }
 
+
+
+  // Export the refresh function
+  // export { refreshBackbayMap };
+
+  // Set up map interactions in a separate function
+  function setupMapInteractions(popup) {
+    if (!map) return;
+    
+    // Make sure map is ready for interaction
+    if (!map.isStyleLoaded()) {
+      setTimeout(() => setupMapInteractions(popup), 100);
+      return;
+    }
+    
+    console.log("Setting up map interactions");
+    
+    // Remove any existing handlers first to avoid duplicates
+    map.off('click', 'backbay-fill');
+    map.off('mousemove', 'backbay-fill');
+    map.off('mouseleave', 'backbay-fill');
+    
+    // Add click handler for census tracts
+    map.on('click', 'backbay-fill', (e) => {
+      if (e.features.length > 0) {
+        const tractId = e.features[0].properties.tract_id;
+        console.log("Clicked on tract:", tractId);
+        
+        // Update Back Bay selected census tracts
+        backbaySelectedTracts.update(selected => {
+          if (selected.includes(tractId)) {
+            return selected.filter(id => id !== tractId);
+          } else {
+            return [...selected, tractId];
+          }
+        });
+      }
+    });
+    
+    // Use a single popup instance for better performance with improved hover interaction
+    map.on('mousemove', 'backbay-fill', (e) => {
+      if (e.features.length > 0) {
+        const feature = e.features[0];
+        const tractId = feature.properties.tract_id;
+        const indexValue = feature.properties.index_value;
+        const evictionRate = feature.properties.eviction_rate;
+        
+        // Update hover state in store to sync with scatter plot
+        hoveredCensusTract.set(tractId);
+        map.getCanvas().style.cursor = 'pointer';
+        
+        // Format value based on index type
+        let formattedValue = '';
+        if (Flipindex === 'median_rent') {
+          formattedValue = `$${indexValue.toLocaleString()}`;
+        } else if (Flipindex === 'median_price_diff') {
+          formattedValue = `$${indexValue.toLocaleString()}`;
+        }
+        
+        // Update existing popup instead of creating a new one
+        popup
+          .setLngLat(e.lngLat)
+          .setHTML(`
+            <h4>Census Tract</h4>
+            <p><strong>GEOID:</strong> ${tractId}</p>
+            <p><strong>${Flipindex === 'median_rent' ? 'Median Rent' : 'Median Price Difference'}:</strong> ${formattedValue}</p>
+            <p><strong>Eviction Rate (${year}):</strong> ${(evictionRate * 100).toFixed(1)}%</p>
+          `)
+          .addTo(map);
+      }
+    });
+    
+    map.on('mouseleave', 'backbay-fill', () => {
+      map.getCanvas().style.cursor = '';
+      popup.remove();
+      hoveredCensusTract.set(null); // Clear hover state
+    });
+    
+    // Add a click handler on the entire map to ensure it's interactive
+    map.on('click', () => {
+      console.log('Map clicked, ensuring interactive state');
+      mapContainer.focus();
+    });
+  }
+  
   // Make sure we refresh the map when component becomes visible
-  // Update activation handler in +page.svelte to call a method in this component
   function refreshBackbayMap() {
     console.log("Refreshing Back Bay map");
-    if (mapInitialized && map && map.isStyleLoaded()) {
-      // Clear existing selections
-      backbaySelectedTracts.set([]);
-      
-      // Show all tracts by default (false means don't filter to Back Bay only)
-      updateMapLayers(false); // CHANGED: Use false to show all tracts by default
-      
-      // Re-select Back Bay tracts
-      setTimeout(() => {
-        selectBackbayTracts();
-      }, 100);
+    if (!map) return;
+    
+    // Even if map isn't fully initialized, set up a retry mechanism
+    if (!mapInitialized || !map.isStyleLoaded()) {
+      setTimeout(() => refreshBackbayMap(), 200);
+      return;
     }
+    
+    // Clear existing selections
+    backbaySelectedTracts.set([]);
+    
+    // Force the map to update
+    updateMapLayers(false);
+    
+    // Give the map a moment to process the update, then select tracts
+    setTimeout(() => {
+      selectBackbayTracts();
+      
+      // Force map interaction by programmatically triggering a resize event
+      map.resize();
+      
+      // Re-setup interactions to ensure they're properly bound
+      if (!interactionsInitialized) {
+        setupMapInteractions(new mapboxgl.Popup({
+          closeButton: false,
+          closeOnClick: false,
+          className: 'map-popup-smooth'
+        }));
+        interactionsInitialized = true;
+      }
+    }, 300);
   }
 
   // Export the refresh function
   export { refreshBackbayMap };
 </script>
 
-<div class="map-container" bind:this={mapContainer}></div>
+<div 
+  class="map-container" 
+  bind:this={mapContainer} 
+  tabindex="0"
+  on:click={() => mapContainer.focus()}
+  on:mouseenter={() => mapContainer.focus()}
+></div>
 
 <style>
   .map-container {
@@ -1158,6 +1293,29 @@
     border-radius: 8px;
     overflow: hidden;
     position: relative;
+    outline: none; /* Remove focus outline */
+    cursor: grab; /* Add grab cursor to indicate draggable */
+  }
+  
+  /* Style for when the map is being dragged */
+  :global(.mapboxgl-canvas-container.mapboxgl-interactive:active) {
+    cursor: grabbing;
+  }
+  
+  /* Add style for navigation controls */
+  :global(.mapboxgl-ctrl-top-right) {
+    top: 10px;
+    right: 10px;
+  }
+  
+  /* Make the map popup transitions smoother */
+  :global(.map-popup-smooth) {
+    transition: opacity 0.2s;
+  }
+  
+  :global(.map-popup-smooth .mapboxgl-popup-content) {
+    transition: transform 0.2s;
+    transform-origin: 50% 0;
   }
   
   :global(.map-legend) {
