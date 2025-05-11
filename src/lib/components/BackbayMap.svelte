@@ -1006,11 +1006,11 @@
     let colorScaleLabels = [];
     
     if (Flipindex === 'median_rent') {
-    legendTitle = 'Median Rent';
-    colorScaleLabels = ['$400', '$1,000', '$2,000', '$3,000', '$3,500+'];
+    legendTitle = 'Median Monthly Rent';
+    colorScaleLabels = ['$400', '$1k', '$2k', '$3k', '$3.5k+'];
   } else if (Flipindex === 'median_price_diff') {
     legendTitle = 'Median Price Difference';
-    colorScaleLabels = ['-$50,000', '$0', '$50,000', '$100,000', '$135,000+'];
+    colorScaleLabels = ['-$50k', '$0', '$50k', '$100k', '$135k+'];
   }
     
     legend.innerHTML = `
@@ -1325,55 +1325,68 @@
     transform-origin: 50% 0;
   }
   
+  /* Fix the legend width issue */
   :global(.map-legend) {
     position: absolute;
     bottom: 20px;
     right: 20px;
     background-color: white;
-    padding: 10px;
+    padding: 15px;
     border-radius: 4px;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
     z-index: 1;
     font-size: 0.8rem;
-    max-width: 200px;
+    min-width: 240px; /* Increase minimum width */
+    max-width: 280px; /* Increase maximum width */
   }
   
   :global(.legend-title) {
     font-weight: bold;
     margin-bottom: 5px;
     margin-top: 10px;
+    text-align: center; /* Center the title */
   }
   
   :global(.legend-scale) {
     display: flex;
-    align-items: center;
+    align-items: flex-end; /* Align items to bottom */
+    justify-content: space-between; /* Distribute items evenly */
     margin-bottom: 10px;
+    width: 100%; /* Use full width */
   }
   
   :global(.legend-item) {
     display: flex;
     flex-direction: column;
     align-items: center;
-    margin-right: 5px;
+    width: 20%; /* Equal width for all items */
+    padding: 0 2px; /* Add some padding */
   }
   
   :global(.legend-color) {
-    width: 20px;
-    height: 20px;
-    margin-bottom: 2px;
+    width: 100%; /* Full width of container */
+    height: 15px; /* Taller color boxes */
+    margin-bottom: 4px;
+  }
+  
+  :global(.legend-label) {
+    font-size: 0.7rem;
+    text-align: center;
+    word-wrap: break-word; /* Allow text to wrap */
+    line-height: 1.2; /* Improve readability */
   }
   
   :global(.legend-circles) {
     display: flex;
     align-items: flex-end;
     margin-bottom: 5px;
+    justify-content: space-around; /* Distribute items evenly */
   }
   
   :global(.legend-circle-item) {
     display: flex;
     flex-direction: column;
     align-items: center;
-    margin-right: 10px;
   }
   
   :global(.legend-circle) {
