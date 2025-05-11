@@ -72,9 +72,10 @@
         
       chart.selectAll('.selected-points circle')
         .transition(t)
-        .attr('r', 5) // Update to consistent size (was 8)
+        .attr('r', 5)
         .style('opacity', 1)
-        .style('stroke', 'none'); // No outline for selected points
+        .style('stroke', 'none')
+        .style('stroke-width', 0);
       
       // Then highlight the hovered tract if any
       if (tractId) {
@@ -290,10 +291,44 @@
     if (chart) updateChart(); // Add this line to ensure chart updates immediately
   }
   
-  // Initialize chart on mount
+  // Initialize chart on mount with proper styling
+  let chartInitialized = false;
+  
   onMount(() => {
     console.log("ScatterPlot2 component mounted");
     initializeChart();
+    
+    // Force immediate data processing and proper styling
+    setTimeout(() => {
+      chartInitialized = true;
+      
+      if (data && chart) {
+        updateChart();
+        
+        // Immediately apply correct styling to selected points
+        chart.selectAll('.selected-points circle')
+          .attr('r', 5) // Same size as regular points
+          .style('fill', '#88e4cc') // Teal for Back Bay
+          .style('opacity', 1)
+          .style('stroke', 'none')
+          .style('stroke-width', 0)
+          .style('filter', 'drop-shadow(0px 0px 2px rgba(0,0,0,0.5))');
+        
+        // If any tracts are already selected, show trajectories for first one
+        if ($backbaySelectedTracts && $backbaySelectedTracts.length > 0) {
+          const firstSelectedTract = $backbaySelectedTracts[0];
+          hoveredTract = firstSelectedTract;
+          if (window.xScale && window.yScale) {
+            updateTrajectoriesAndLabels(window.xScale, window.yScale);
+          }
+        }
+        
+        // Also force the chart to handle any hoveredCensusTract
+        if ($hoveredCensusTract) {
+          handleHoveredTract($hoveredCensusTract);
+        }
+      }
+    }, 100);
     
     // Cleanup on component destroy
     return () => {
@@ -585,21 +620,21 @@
       .append('circle')
       .attr('class', 'selected-circle'); // Add class for easier selection
       
-    // Merge and update all selected points
+    // Merge and update all selected points with consistent styling
     newSelectedPoints.merge(selectedPoints)
       .attr('cx', d => xScale(d.x))
       .attr('cy', d => yScale(d.y))
-      .attr('r', 8)
-      .style('fill', '#88e4cc')
-      .style('stroke', '#000')
-      .style('stroke-width', 1)
+      .attr('r', 5) // Same size as regular points
+      .style('fill', '#88e4cc') // Keep Back Bay teal color
       .style('opacity', 1)
+      .style('stroke', 'none') // No outline
+      .style('stroke-width', 0)
+      .style('filter', 'drop-shadow(0px 0px 2px rgba(0,0,0,0.5))') // Add drop shadow
       .on('mouseover', function(event, d) {
         d3.select(this).transition()
           .duration(150)
-          .attr('r', 10)
-          .style('stroke-width', 2);
-          
+          .attr('r', 7); // Hover size
+        
         // Update hover state and map highlight
         hoveredTract = d.tract_id;
         hoveredCensusTract.set(d.tract_id);
@@ -618,7 +653,7 @@
         if (!isDragging) {
           d3.select(this).transition()
             .duration(250)
-            .attr('r', 8)
+            .attr('r', 5)
             .style('stroke-width', 1);
           
           hoveredTract = null;
@@ -660,6 +695,59 @@
           updateTrajectoriesAndLabels(xScale, yScale);
         })
       );
+  }
+  
+  // Add a dedicated function to handle hover state for the component initialization
+  function handleHoveredTract(tractId) {
+    if (!chart || !chartInitialized) return;
+    
+    try {
+      // Reset all points
+      chart.selectAll('.points circle')
+        .attr('r', 5)
+        .style('opacity', hasSelectedTracts() ? 0.3 : 0.6)
+        .style('stroke', 'transparent')
+        .style('stroke-width', 0);
+        
+      chart.selectAll('.selected-points circle')
+        .attr('r', 5)
+        .style('opacity', 1)
+        .style('stroke', 'none')
+        .style('stroke-width', 0);
+      
+      // Then highlight if there's a tract ID
+      if (tractId) {
+        // Find points with this tract ID
+        const regularPoint = chart.select('.points').selectAll('circle')
+          .filter(d => d && d.tract_id === tractId);
+          
+        const selectedPoint = chart.select('.selected-points').selectAll('circle')
+          .filter(d => d && d.tract_id === tractId);
+        
+        // Highlight regular point
+        if (!regularPoint.empty()) {
+          regularPoint
+            .attr('r', 7)
+            .style('opacity', 0.9)
+            .style('stroke', '#2da88a')
+            .style('stroke-width', 2);
+        }
+        
+        // Highlight selected point
+        if (!selectedPoint.empty()) {
+          selectedPoint
+            .attr('r', 7)
+            .style('stroke', '#2da88a')
+            .style('stroke-width', 2);
+        }
+        
+        // Set hover state and draw trajectory
+        hoveredTract = tractId;
+        updateTrajectoriesAndLabels(window.xScale, window.yScale);
+      }
+    } catch (error) {
+      console.error("Error in handleHoveredTract:", error);
+    }
   }
 </script>
 
@@ -766,5 +854,12 @@
     color: #666;
     font-style: italic;
     margin-top: 0.5rem;
+  }
+  
+  :global(.selected-points circle) {
+    transition: r 0.2s ease;
+    filter: drop-shadow(0px 0px 2px rgba(0,0,0,0.5)) !important;
+    stroke: none !important;
+    stroke-width: 0 !important;
   }
 </style>

@@ -119,10 +119,35 @@
     selectedInvestorType.set(type);
   }
   
-  // Initialize chart on mount
+  // Initialize chart on mount with immediate setup of correct styling
   onMount(() => {
     console.log("ScatterPlot component mounted");
     initializeChart();
+    
+    // Force immediate data processing after a small delay
+    setTimeout(() => {
+      if (data && chart) {
+        updateChart();
+        
+        // Immediately apply correct styling to selected points
+        chart.selectAll('.selected-points circle')
+          .attr('r', 5) // Same size as regular points
+          .style('fill', '#EEB0C2') // Pink for Dorchester
+          .style('opacity', 1)
+          .style('stroke', 'none')
+          .style('stroke-width', 0)
+          .style('filter', 'drop-shadow(0px 0px 2px rgba(0,0,0,0.5))');
+        
+        // If any tracts are already selected, show trajectories for first one
+        if ($dorchesterSelectedTracts && $dorchesterSelectedTracts.length > 0) {
+          const firstSelectedTract = $dorchesterSelectedTracts[0];
+          hoveredTract = firstSelectedTract;
+          if (window.xScale && window.yScale) {
+            updateTrajectoriesAndLabels(window.xScale, window.yScale);
+          }
+        }
+      }
+    }, 100);
     
     // Cleanup on component destroy
     return () => {
@@ -485,7 +510,7 @@
         })
       );
     
-    // Update selected points
+    // Update selected points with consistent styling
     const selectedPoints = chart.select('.selected-points')
       .selectAll('circle')
       .data(data.allPoints.filter(d => d.selected));
@@ -497,11 +522,12 @@
       .merge(selectedPoints)
       .attr('cx', d => xScale(d.x))
       .attr('cy', d => yScale(d.y))
-      .attr('r', 8) // Make larger and consistent with ScatterPlot2 (was 6)
-      .style('fill', '#EEB0C2')
-      .style('stroke', '#000') // Add stroke to match ScatterPlot2
-      .style('stroke-width', 1) // Add stroke width to match ScatterPlot2
-      .style('opacity', 1) // Full opacity for selected points (was 0.8)
+      .attr('r', 5)
+      .style('fill', '#EEB0C2') // Pink for Dorchester
+      .style('opacity', 1)
+      .style('stroke', 'none')
+      .style('stroke-width', 0)
+      .style('filter', 'drop-shadow(0px 0px 2px rgba(0,0,0,0.5))')
       .on('click', function(event, d) {
         // Deselect the tract in the map when clicked in the scatter plot
         dorchesterSelectedTracts.update(selected => selected.filter(id => id !== d.tract_id));
@@ -512,7 +538,9 @@
       .on('mouseover', function(event, d) {
         d3.select(this).transition()
           .duration(200)
-          .attr('r', 10); // Increase size on hover (was 8)
+          .attr('r', 7)
+          .style('stroke', '#EEB0C2')
+          .style('stroke-width', 2);
           
         hoveredTract = d.tract_id;
         hoveredCensusTract.set(d.tract_id);
@@ -533,7 +561,9 @@
       .on('mouseout', function() {
         d3.select(this).transition()
           .duration(500)
-          .attr('r', 8); // Return to normal size (was 6)
+          .attr('r', 5)
+          .style('stroke', 'none')
+          .style('stroke-width', 0);
           
         if (!isDragging) {
           hoveredTract = null;
@@ -759,5 +789,7 @@
   
   :global(.selected-points circle) {
     transition: r 0.2s ease;
-    filter: drop-shadow(0px 0px 2px rgba(0,0,0,0.5)); /* Add drop shadow */
+    filter: drop-shadow(0px 0px 2px rgba(0,0,0,0.5)) !important;
+    stroke: none !important;
+    stroke-width: 0 !important;
   }</style>
