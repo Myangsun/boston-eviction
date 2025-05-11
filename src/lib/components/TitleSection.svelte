@@ -19,7 +19,7 @@
       />
     </div>
     <h1>404 Housing Not Found</h1>
-    <p class="subtitle">How Corporate Ownership Shapes Housing?</p>
+    <p class="subtitle">Tracing the impact of property investment on eviction in Boston</p>
     <div class="scroll-indicator">
       <p>Scroll to explore</p>
       <div class="arrow-down">↓</div>

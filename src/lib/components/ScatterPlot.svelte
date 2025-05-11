@@ -695,7 +695,7 @@
     </button>
   </div>
   <div class="chart-explanation">
-    <p>This scatter plot shows the relationship between {investorType} investor counts and eviction rates in census tracts. Selected tracts are highlighted in pink. The dashed lines show the Boston average.</p>
+    <p>A house as an investment means purchasing property not for residence but for profit. Investors are grouped by annual spending and acquisition pace into four sizes: small, medium, large, and institutional. Larger investors often hold multiple properties under LLCs. </p>
   </div>
 </div>
 
