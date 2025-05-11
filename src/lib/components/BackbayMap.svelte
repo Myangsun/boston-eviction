@@ -27,6 +27,9 @@
   // Add a flag to track interactions initialization
   let interactionsInitialized = false;
   
+  // Add a debug flag to control console output
+  const DEBUG_MODE = false; // Set to true only when debugging
+  
   // Function to update the fill opacity based on selected tracts
   function updateFillOpacity(selected) {
     try {
@@ -175,6 +178,7 @@
       const backbayTracts = [];
       const processedTracts = new Set(); // To avoid duplicates
       const missingBoundaries = new Set(); // To track missing tract boundaries
+      let missingCount = 0; // Count missing boundaries
       
       // Check each tract
       $dorchesterData.forEach(tract => {
@@ -182,7 +186,7 @@
         const tractId = tract.tract_id || tract.GEOID || tract.geoid;
         
         if (!tractId) {
-          console.debug("Tract missing ID:", tract);
+          if (DEBUG_MODE) console.debug("Tract missing ID:", tract);
           return; // Skip this tract
         }
         
@@ -196,7 +200,8 @@
         const boundaryFeature = findBoundaryFeature(tractId, tractIdToBoundary);
         
         if (!boundaryFeature) {
-          if (!missingBoundaries.has(tractId)) {
+          missingCount++;
+          if (DEBUG_MODE && !missingBoundaries.has(tractId)) {
             console.warn(`No boundary found for tract: ${tractId}`);
             missingBoundaries.add(tractId); // Only log each missing tract once
           }
@@ -229,6 +234,11 @@
           console.error(`Error processing tract ${tractId}:`, err);
         }
       });
+      
+      // Log a summary instead of individual messages
+      if (missingCount > 0 && !DEBUG_MODE) {
+        console.info(`${missingCount} census tracts were skipped due to missing boundary data.`);
+      }
       
       console.log(`Found ${backbayTracts.length} tracts within Back Bay`);
       
@@ -1155,8 +1165,6 @@
 
 
 
-  // Export the refresh function
-  // export { refreshBackbayMap };
 
   // Set up map interactions in a separate function
   function setupMapInteractions(popup) {
@@ -1278,13 +1286,12 @@
   export { refreshBackbayMap };
 </script>
 
-<div 
+<!-- Fix the redundant role warning by removing the role attribute -->
+<section 
   class="map-container" 
-  bind:this={mapContainer} 
-  tabindex="0"
-  on:click={() => mapContainer.focus()}
-  on:mouseenter={() => mapContainer.focus()}
-></div>
+  bind:this={mapContainer}
+  aria-label="Back Bay interactive map"
+></section>
 
 <style>
   .map-container {
