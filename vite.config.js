@@ -3,7 +3,7 @@ import { defineConfig } from "vite";
 
 export default defineConfig({
   plugins: [sveltekit()],
-  base: './', // Changed to relative path for more flexibility
+  base: "./", // Changed to relative path for more flexibility
   server: {
     fs: {
       allow: [".."],
@@ -17,13 +17,8 @@ export default defineConfig({
     chunkSizeWarningLimit: 1000,
     rollupOptions: {
       output: {
-        manualChunks: {
-          // Split large dependencies into separate chunks
-          mapbox: ['mapbox-gl'],
-          d3: ['d3'],
-          turf: ['@turf/turf']
-        }
-      }
-    }
-  }
+        manualChunks: {},
+      },
+    },
+  },
 });
