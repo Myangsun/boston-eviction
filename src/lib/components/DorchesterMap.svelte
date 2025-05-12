@@ -746,12 +746,13 @@
           type: 'line',
           source: 'dorchester-data',
           paint: {
-            'line-color': '#D81B60',
-            'line-width': 4,
-            'line-opacity': 0.8
+            'line-color': '#EEB0C2', // Pink for Dorchester theme
+            'line-width': 12, // Much wider (was 8) for even more prominent shadow
+            'line-blur': 8, // More blur (was 5) for better shadow spread
+            'line-opacity': 0.8 // Slightly more opaque (was 0.7)
           },
           filter: ['==', 'tract_id', ''] // Initially empty filter
-        });
+        }, 'dorchester-fill'); // Place below the fill layer so it appears as a glow/shadow
       }
 
       
@@ -1076,20 +1077,32 @@
     }
   }
 
-  // Function to highlight hovered tract from scatter plot
+  // Function to highlight hovered tract from scatter plot - enhanced with better visual styling
   function highlightHoveredTract(tractId) {
     try {
       if (!map || !map.getLayer('dorchester-fill')) return;
       
       if (tractId) {
-        // Do NOT change the fill opacity - maintain what's set by updateFillOpacity
+        // Apply enhanced hover effects with thick black border and prominent drop shadow
         
-        // Make the hovered tract's border thicker and same color as Dorchester boundary
+        // Update opacity for the hovered tract to make it COMPLETELY opaque
+        map.setPaintProperty('dorchester-fill', 'fill-opacity', [
+          'case',
+          ['==', ['get', 'tract_id'], tractId],
+          1.0, // Full opacity (was 0.95) for hovered tract
+          ['in', ['get', 'tract_id'], ['literal', $dorchesterSelectedTracts]],
+          0.8,  // High opacity for selected tracts
+          ['==', ['get', 'is_dorchester'], true],
+          0.7,  // Medium opacity for Dorchester tracts
+          0.2   // Low opacity for other tracts
+        ]);
+        
+        // Make the hovered tract's border thicker black
         map.setPaintProperty('dorchester-outline', 'line-width', [
           'case',
           ['==', ['get', 'tract_id'], tractId],
-          3,      // Much thicker for hovered
-          ['in', ['get', 'tract_id'], ['literal', $dorchesterSelectedTracts]], // Fix: Use dorchesterSelectedTracts instead of selectedCensusTracts
+          6,      // Even thicker (was 5) for hovered
+          ['in', ['get', 'tract_id'], ['literal', $dorchesterSelectedTracts]],
           1.5,    // Selected tracts
           0.5     // Normal width
         ]);
@@ -1097,30 +1110,41 @@
         map.setPaintProperty('dorchester-outline', 'line-color', [
           'case',
           ['==', ['get', 'tract_id'], tractId],
-          '#a04e62', // Match the Dorchester boundary color
-          ['in', ['get', 'tract_id'], ['literal', $dorchesterSelectedTracts]], // Fix: Use dorchesterSelectedTracts instead of selectedCensusTracts
+          '#000000', // Black for hover effect
+          ['in', ['get', 'tract_id'], ['literal', $dorchesterSelectedTracts]],
           '#000000', // Black outline for selected tracts
           '#555555'  // Gray outline for non-selected tracts
         ]);
         
-        // Update the pulsing outline effect
+        // Update the drop shadow effect with an even more prominent shadow
         if (map.getLayer('hovered-tract-pulse')) {
           map.setFilter('hovered-tract-pulse', ['==', ['get', 'tract_id'], tractId]);
-          map.setPaintProperty('hovered-tract-pulse', 'line-color', '#a04e62');
-          map.setPaintProperty('hovered-tract-pulse', 'line-width', 4);
+          map.setPaintProperty('hovered-tract-pulse', 'line-color', '#EEB0C2'); // Keep shadow tinted to Dorchester theme
+          map.setPaintProperty('hovered-tract-pulse', 'line-width', 12); // Much wider (was 8) for even more prominent shadow
+          map.setPaintProperty('hovered-tract-pulse', 'line-blur', 8); // More blur (was 5) for better shadow spread
+          map.setPaintProperty('hovered-tract-pulse', 'line-opacity', 0.8); // Slightly more opaque (was 0.7)
         }
       } else {
-        // When nothing is hovered, go back to normal border style only
+        // Reset to normal state when nothing is hovered
+        map.setPaintProperty('dorchester-fill', 'fill-opacity', [
+          'case',
+          ['in', ['get', 'tract_id'], ['literal', $dorchesterSelectedTracts]],
+          0.8,    // Selected tracts
+          ['==', ['get', 'is_dorchester'], true],
+          0.7,    // Medium opacity for Dorchester tracts
+          0.2     // Low opacity for non-Dorchester tracts
+        ]);
+        
         map.setPaintProperty('dorchester-outline', 'line-width', [
           'case',
-          ['in', ['get', 'tract_id'], ['literal', $dorchesterSelectedTracts]], // Fix: Use dorchesterSelectedTracts instead of selectedCensusTracts
+          ['in', ['get', 'tract_id'], ['literal', $dorchesterSelectedTracts]],
           1.5,    // Selected tracts
           0.5     // Normal width
         ]);
         
         map.setPaintProperty('dorchester-outline', 'line-color', [
           'case',
-          ['in', ['get', 'tract_id'], ['literal', $dorchesterSelectedTracts]], // Fix: Use dorchesterSelectedTracts instead of selectedCensusTracts
+          ['in', ['get', 'tract_id'], ['literal', $dorchesterSelectedTracts]],
           '#000000', // Black outline for selected tracts
           '#555555'  // Gray outline for non-selected tracts
         ]);

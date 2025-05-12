@@ -769,6 +769,26 @@
       // IMPORTANT: DO NOT create the backbay-hovered-tract layer at all!
       // The layer was completely removed from initialization
       
+      // Add a shadow layer for hovering if not already present - DO create it now, contrary to previous instructions
+      if (!map.getLayer('backbay-hovered-shadow')) {
+        try {
+          map.addLayer({
+            id: 'backbay-hovered-shadow',
+            type: 'line',
+            source: 'backbay-data',
+            paint: {
+              'line-color': '#88e4cc', // Teal for Back Bay theme
+              'line-width': 12, // Much wider (was 8)
+              'line-blur': 8, // More blur (was 5)
+              'line-opacity': 0.8 // Higher opacity (was 0.7)
+            },
+            filter: ['==', 'tract_id', ''] // Initially empty filter
+          }, 'backbay-fill'); // Place below the fill layer for shadow effect
+        } catch (err) {
+          console.log("Shadow layer couldn't be created:", err);
+        }
+      }
+      
       updateMapLayers(false); // CHANGED: Use false to show all tracts by default
     } catch (error) {
       console.error("Error initializing map layers:", error);
@@ -1148,36 +1168,17 @@
     }
   }
 
-  // Function to highlight hovered tract - completely rewritten to avoid any filtering
+  // Function to highlight hovered tract - enhanced with thick black border and prominent shadow
   function highlightHoveredTract(tractId) {
     try {
       if (!map || !map.getLayer('backbay-fill')) return;
       
       if (tractId) {
-        // Update the outline properties for the hovered tract - these aren't causing errors
-        map.setPaintProperty('backbay-outline', 'line-width', [
-          'case',
-          ['==', ['get', 'tract_id'], tractId],
-          3,      // Much thicker for hovered
-          ['in', ['get', 'tract_id'], ['literal', $backbaySelectedTracts]],
-          1.5,    // Selected tracts
-          0.5     // Normal width
-        ]);
-        
-        map.setPaintProperty('backbay-outline', 'line-color', [
-          'case',
-          ['==', ['get', 'tract_id'], tractId],
-          '#2da88a', // Match the Back Bay boundary color
-          ['in', ['get', 'tract_id'], ['literal', $backbaySelectedTracts]],
-          '#000000', // Black outline for selected tracts
-          '#555555'  // Gray outline for non-selected tracts
-        ]);
-        
-        // Update fill opacity to emphasize the hovered tract
+        // Update fill opacity to make hovered tract COMPLETELY opaque
         map.setPaintProperty('backbay-fill', 'fill-opacity', [
           'case',
           ['==', ['get', 'tract_id'], tractId],
-          0.9,    // Highest opacity for hovered tract
+          1.0,   // Full opacity (was 0.95) for hovered tract
           ['in', ['get', 'tract_id'], ['literal', $backbaySelectedTracts]],
           0.8,    // High opacity for selected tracts
           ['==', ['get', 'is_backbay'], true],
@@ -1185,13 +1186,11 @@
           0.2     // Low opacity for non-Back Bay tracts
         ]);
         
-        // Instead of using the problematic hover layer, 
-        // just modify the existing outline layer properties
-        // This avoids all the filter-related errors
-      } else {
-        // Reset to normal state when not hovering
+        // Make the hovered tract's border even thicker black
         map.setPaintProperty('backbay-outline', 'line-width', [
           'case',
+          ['==', ['get', 'tract_id'], tractId],
+          6,      // Even thicker (was 5) for hovered
           ['in', ['get', 'tract_id'], ['literal', $backbaySelectedTracts]],
           1.5,    // Selected tracts
           0.5     // Normal width
@@ -1199,12 +1198,23 @@
         
         map.setPaintProperty('backbay-outline', 'line-color', [
           'case',
+          ['==', ['get', 'tract_id'], tractId],
+          '#000000', // Black outline for hover
           ['in', ['get', 'tract_id'], ['literal', $backbaySelectedTracts]],
           '#000000', // Black outline for selected tracts
           '#555555'  // Gray outline for non-selected tracts
         ]);
         
-        // Reset fill opacity
+        // Update the shadow effect to be significantly more prominent
+        if (map.getLayer('backbay-hovered-shadow')) {
+          map.setFilter('backbay-hovered-shadow', ['==', ['get', 'tract_id'], tractId]);
+          map.setPaintProperty('backbay-hovered-shadow', 'line-color', '#88e4cc'); // Keep tint that matches Back Bay theme
+          map.setPaintProperty('backbay-hovered-shadow', 'line-width', 12); // Much wider (was 8)
+          map.setPaintProperty('backbay-hovered-shadow', 'line-blur', 8); // More blur (was 5)
+          map.setPaintProperty('backbay-hovered-shadow', 'line-opacity', 0.8); // Higher opacity (was 0.7)
+        }
+      } else {
+        // Reset to normal state when not hovering
         map.setPaintProperty('backbay-fill', 'fill-opacity', [
           'case',
           ['in', ['get', 'tract_id'], ['literal', $backbaySelectedTracts]],
@@ -1213,6 +1223,25 @@
           0.7,    // Medium opacity for Back Bay tracts
           0.2     // Low opacity for non-Back Bay tracts
         ]);
+        
+        map.setPaintProperty('backbay-outline', 'line-width', [
+          'case',
+          ['in', ['get', 'tract_id'], ['literal', $backbaySelectedTracts]],
+          1.5,    // Selected tracts
+          0.5     // Normal width
+        ]);
+        
+        map.setPaintProperty('backbay-outline', 'line-color', [
+          'case',
+          ['in', ['get', 'tract_id'], ['literal', $backbaySelectedTracts]],
+          '#000000', // Black outline for selected tracts
+          '#555555'  // Gray outline for non-selected tracts
+        ]);
+        
+        // Remove shadow effect
+        if (map.getLayer('backbay-hovered-shadow')) {
+          map.setFilter('backbay-hovered-shadow', ['==', 'tract_id', '']);
+        }
       }
     } catch (error) {
       console.error("Error highlighting hovered tract:", error);
