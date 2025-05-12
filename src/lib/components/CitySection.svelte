@@ -216,7 +216,6 @@
           .setLngLat(e.lngLat)
           .setHTML(
             `
-        <h4>Tract ${p.tract_id}</h4>
         <p><strong>${metricLabel}:</strong> ${metricValue}</p>
         <p><strong>Eviction Rate (${year}):</strong> ${evictionPct}%</p>
       `
@@ -777,14 +776,6 @@
     flex-wrap: wrap;
   }
 
-  .section-footer {
-    margin-top: 2rem;
-    text-align: center;
-    max-width: 800px;
-    margin-left: auto;
-    margin-right: auto;
-  }
-
   :global(.map-legend) {
     position: absolute;
     bottom: 20px;
@@ -806,7 +797,7 @@
 
   :global(.legend-scale) {
     display: flex;
-    align-items: center;
+    align-items: baseline;
     margin-bottom: 10px;
   }
 
@@ -825,7 +816,7 @@
 
   :global(.legend-circles) {
     display: flex;
-    align-items: flex-end;
+    align-items: baseline;
     margin-bottom: 5px;
   }
 

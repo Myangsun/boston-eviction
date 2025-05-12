@@ -1497,7 +1497,7 @@
   
   :global(.legend-scale) {
     display: flex;
-    align-items: flex-end; /* Align items to bottom */
+    align-items: baseline; /* Align items to bottom */
     justify-content: space-between; /* Distribute items evenly */
     margin-bottom: 8px; /* Reduced from 10px */
     width: 100%; /* Use full width */
@@ -1526,8 +1526,8 @@
   
   :global(.legend-circles) {
     display: flex;
-    align-items: flex-end;
-    margin-bottom: 4px; /* Reduced from 5px */
+    align-items: baseline;
+    margin-bottom: 5px; /* Reduced from 5px */
     justify-content: space-around; /* Distribute items evenly */
   }
   

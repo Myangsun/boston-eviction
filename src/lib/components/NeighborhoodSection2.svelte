@@ -173,22 +173,22 @@
   
   <div class="control-panel">
     <div class="year-selector">
-      <label>Year:</label>
-      <div class="button-group">
-        <button class:active={year === '2020'} on:click={() => setYear('2020')}>2020</button>
-        <button class:active={year === '2021'} on:click={() => setYear('2021')}>2021</button>
-        <button class:active={year === '2022'} on:click={() => setYear('2022')}>2022</button>
-        <button class:active={year === '2023'} on:click={() => setYear('2023')}>2023</button>
+      <label id="year-selector-label" for="year-buttons-group">Year:</label>
+      <div id="year-buttons-group" class="button-group" role="radiogroup" aria-labelledby="year-selector-label">
+        <button role="radio" aria-checked={year === '2020'} class:active={year === '2020'} on:click={() => setYear('2020')}>2020</button>
+        <button role="radio" aria-checked={year === '2021'} class:active={year === '2021'} on:click={() => setYear('2021')}>2021</button>
+        <button role="radio" aria-checked={year === '2022'} class:active={year === '2022'} on:click={() => setYear('2022')}>2022</button>
+        <button role="radio" aria-checked={year === '2023'} class:active={year === '2023'} on:click={() => setYear('2023')}>2023</button>
       </div>
     </div>
     
     <div class="flipindex-selector">
-      <label>Data Type:</label>
-      <div class="button-group">
-        <button class:active={flipindexLocal === 'median_rent'} on:click={() => setFlipindex('median_rent')}>
+      <label id="flipindex-selector-label" for="flipindex-buttons-group">Data Type:</label>
+      <div id="flipindex-buttons-group" class="button-group" role="radiogroup" aria-labelledby="flipindex-selector-label">
+        <button role="radio" aria-checked={flipindexLocal === 'median_rent'} class:active={flipindexLocal === 'median_rent'} on:click={() => setFlipindex('median_rent')}>
           Rent
         </button>
-        <button class:active={flipindexLocal === 'median_price_diff'} on:click={() => setFlipindex('median_price_diff')}>
+        <button role="radio" aria-checked={flipindexLocal === 'median_price_diff'} class:active={flipindexLocal === 'median_price_diff'} on:click={() => setFlipindex('median_price_diff')}>
           Flip Difference
         </button>
       </div>

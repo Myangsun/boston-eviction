@@ -54,11 +54,14 @@
       console.log("ActiveSection changed to:", value);
     });
 
+    const cleanupScrollChecker = setupActiveScrollSectionChecker();
+
     return () => {
       // Clean up subscriptions when component is destroyed
       unsubscribeLoading();
       unsubscribeError();
       unsubscribeActiveSection(); 
+      cleanupScrollChecker();
     };
   });
 
@@ -101,6 +104,45 @@
       scrollProgress.set(progress);
     });
   }
+
+  function setupActiveScrollSectionChecker() {
+  // Run this check every 500ms
+  const intervalId = setInterval(() => {
+    // Get all sections
+    const sections = document.querySelectorAll(".section");
+    const windowHeight = window.innerHeight;
+    const scrollPosition = window.scrollY;
+    
+    // Check each section to see if it's in view
+    sections.forEach((section) => {
+      const sectionTop = section.offsetTop;
+      const sectionHeight = section.offsetHeight;
+      
+      // Calculate if the section is visible (at least 40% in view)
+      const sectionVisible = 
+        (scrollPosition + windowHeight * 0.4 > sectionTop) && 
+        (scrollPosition < sectionTop + sectionHeight * 0.6);
+      
+      if (sectionVisible) {
+        let sectionId = section.id;
+        
+        // Set the correct active section value
+        if (sectionId === "story-dorchester-section") {
+          activeSection.set("story-dorchester");
+          console.log("Setting active section to story-dorchester");
+        } else if (sectionId === "story-backbay-section") {
+          activeSection.set("story-backbay");
+          console.log("Setting active section to story-backbay");
+        } else {
+          activeSection.set(sectionId.replace("-section", ""));
+        }
+      }
+    });
+  }, 500);
+  
+  // Clean up on component destroy
+  return () => clearInterval(intervalId);
+}
 
   // Handle scroll indicator click
   function scrollToNextSection() {
@@ -422,6 +464,7 @@
     color: white !important;
     border-color: var(--primary-color) !important;
     transform: scale(1.2);
+    transition: all 0.3s ease !important;
   }
 
   .dot-label {
