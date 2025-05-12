@@ -173,24 +173,11 @@
   
   <div class="control-panel">
     <div class="year-selector">
-      <label id="year-selector-label" for="year-buttons-group">Year:</label>
       <div id="year-buttons-group" class="button-group" role="radiogroup" aria-labelledby="year-selector-label">
         <button role="radio" aria-checked={year === '2020'} class:active={year === '2020'} on:click={() => setYear('2020')}>2020</button>
         <button role="radio" aria-checked={year === '2021'} class:active={year === '2021'} on:click={() => setYear('2021')}>2021</button>
         <button role="radio" aria-checked={year === '2022'} class:active={year === '2022'} on:click={() => setYear('2022')}>2022</button>
         <button role="radio" aria-checked={year === '2023'} class:active={year === '2023'} on:click={() => setYear('2023')}>2023</button>
-      </div>
-    </div>
-    
-    <div class="flipindex-selector">
-      <label id="flipindex-selector-label" for="flipindex-buttons-group">Data Type:</label>
-      <div id="flipindex-buttons-group" class="button-group" role="radiogroup" aria-labelledby="flipindex-selector-label">
-        <button role="radio" aria-checked={flipindexLocal === 'median_rent'} class:active={flipindexLocal === 'median_rent'} on:click={() => setFlipindex('median_rent')}>
-          Rent
-        </button>
-        <button role="radio" aria-checked={flipindexLocal === 'median_price_diff'} class:active={flipindexLocal === 'median_price_diff'} on:click={() => setFlipindex('median_price_diff')}>
-          Flip Difference
-        </button>
       </div>
     </div>
   </div>
@@ -376,7 +363,7 @@
     flex-wrap: wrap;
   }
   
-  .year-selector, .flipindex-selector {
+  .year-selector {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -388,13 +375,7 @@
     gap: 0.5rem;
   }
   
-  label {
-    font-weight: bold;
-    font-size: 0.9rem;
-    color: #666;
-  }
-  
-  .year-selector button, .flipindex-selector button {
+  .year-selector button {
     padding: 0.5rem 1rem;
     background-color: white;
     border: 1px solid #ccc;
@@ -407,11 +388,11 @@
     min-width: 70px; /* Ensure consistent button widths */
   }
   
-  .year-selector button:hover, .flipindex-selector button:hover {
+  .year-selector button:hover {
     background-color: #f5f5f5;
   }
   
-  .year-selector button.active, .flipindex-selector button.active {
+  .year-selector button.active {
     background-color: #88e4cc; /* Teal for Back Bay */
     color: black;
     border-color: #88e4cc;

@@ -245,7 +245,7 @@
         top: 80%;
         left: 10%;
         width: 80%;
-        max-width: 1000px;
+        max-width: 1200px;
         text-align: center;
         
         transition: transform 0.5s ease-out;
@@ -258,7 +258,7 @@
       width: 112%;
       height: auto;
       margin-bottom: 1rem;
-      margin-left: 0px ;
+      margin-left: 1% ;
     }
     
     

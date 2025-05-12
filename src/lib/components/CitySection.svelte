@@ -710,7 +710,7 @@
           class="rent-btn"
           class:active={indicator === "median_rent"}
           on:click={() => selectFilter("indicator", "median_rent")}
-          >Median Rent</button
+          >Rent</button
         >
         <button
           class="rent-btn"
@@ -740,6 +740,16 @@
   <div class="visualization-container full-width">
     <div class="map-container" bind:this={mapContainer}></div>
   </div>
+
+    <div class="section-footer">
+      <p>
+        This project was developed with guidance and feedback from the Metropolitan Area Planning Commission (MAPC). The data is sourced from eviction records, property assessments, real estate transactions, and the 2020 U.S. Census. Additional data is sourced from the 2020 ACS 5-year estimates. Court filings data is retrieved from court records and compiled by Eric Robsky Huntley.
+      </p>
+      <p>
+        Team: Mingyang Sun, Elisa Xia, Jiao Zhao, Hyun Kim
+
+      </p>
+    </div>
 </section>
 
 <style>
@@ -952,5 +962,15 @@
     background: #4f4f4f;
     color: white;
     border-color: #4f4f4f;
+  }
+
+  .section-footer {
+    margin-top: 2rem;
+    text-align: center;
+    max-width: 1200px;
+    margin-left: auto;
+    margin-right: auto;
+    color: dimgray;
+    font-size: small;
   }
 </style>
