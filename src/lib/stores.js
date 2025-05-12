@@ -19,6 +19,7 @@ export const visibleLayers = writable({
   rent: false,
   flip: false,
 });
+export const citySelectedIndicator = writable("");
 
 // Add the missing exports for data loading state
 export const dataLoading = writable(true);

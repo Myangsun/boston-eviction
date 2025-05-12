@@ -8,17 +8,21 @@
     selectedYear,
     dataScales,
     censusData,
-    selectedFlipindex,
+  
     // Import dorchesterData but keep it independent from other components
     dorchesterData
   } from "$lib/stores.js";
   import { getMapboxToken } from "$lib/mapboxConfig.js";
 
   let mapContainer, map, legend;
-  let Flipindex;
-  // Initialize to empty string but don't modify the global store immediately
-  // This prevents affecting other components that depend on this value
-  let localFlipindex = "";
+  import { citySelectedIndicator } from "$lib/stores.js";
+
+  let indicator = "";
+  const unsubIndicator = citySelectedIndicator.subscribe(v => {
+    indicator = v;
+    if (map) updateMapLayers();
+  });
+  
 
   // local reactive copies
   let layers = {};
@@ -66,12 +70,8 @@
     if (map) updateMapLayers();
   });
   
-  // Use local variable first, then update store when needed
-  const unsubFlip = selectedFlipindex.subscribe((v) => {
-    Flipindex = v;
-    if (map) updateMapLayers();
-  });
-
+ 
+ 
   /**
    * Only one of { investor, demographic, indicator } can be active at a time.
    * category: "investor" | "demographic" | "indicator"
@@ -91,10 +91,7 @@
         asian: false,
         other: false,
       });
-      // Use local variable first to avoid impacting other components
-      localFlipindex = "";
-      // Then update the global store
-      selectedFlipindex.set(localFlipindex);
+      citySelectedIndicator.set(" ");
     } else if (category === "demographic") {
       visibleLayers.set({
         institutional: false,
@@ -108,10 +105,7 @@
         asian: type === "asian",
         other: type === "other",
       });
-      // Use local variable first to avoid impacting other components
-      localFlipindex = "";
-      // Then update the global store
-      selectedFlipindex.set(localFlipindex);
+      citySelectedIndicator.set(" ");
     } else if (category === "indicator") {
       visibleLayers.set({
         institutional: false,
@@ -125,17 +119,12 @@
         asian: false,
         other: false,
       });
-      // Use local variable first to avoid impacting other components
-      localFlipindex = type;
-      // Then update the global store
-      selectedFlipindex.set(localFlipindex);
+      citySelectedIndicator.set(type);
     }
     updateMapLayers();
   }
 
   onMount(() => {
-    // Use local Flipindex value rather than setting global store
-    localFlipindex = "";
     
     mapboxgl.accessToken = getMapboxToken();
     const bostonBounds = [
@@ -181,8 +170,8 @@
 
         // pick label + value based on current mode
         let metricLabel, metricValue;
-        if (Flipindex) {
-          metricLabel = Flipindex === "median_rent" ? "Median Rent" : "Price Δ";
+        if (indicator) {
+          metricLabel = indicator === "median_rent" ? "Median Rent" : "Price Δ";
           
           // Add safety check for p.index_value
           let indexValue = p.index_value !== undefined ? p.index_value : 0;
@@ -253,7 +242,7 @@
       unsubBounds();
       unsubScales();
       unsubCensus();
-      unsubFlip();
+      unsubIndicator();
     };
   });
 
@@ -378,7 +367,7 @@
     }
 
     // 2) indicator (rent/price)
-    if (Flipindex === "median_rent" || Flipindex === "median_price_diff") {
+    if (indicator === "median_rent" || indicator === "median_price_diff") {
       // Use dorchesterData store as the source for median_rent and median_price_diff values
       if (!fullDorchesterData || fullDorchesterData.length === 0) {
         console.log("Waiting for fullDorchesterData to load");
@@ -397,10 +386,16 @@
         if (!rec) return [];
         
         // Get value from dorchesterData which has the same structure
-        const val = Flipindex === "median_rent" 
-          ? +dorchesterRec.median_rent || 0 
-          : +dorchesterRec.median_price_diff || 0;
-          
+        let val;
+        if (indicator === "median_rent") {
+          val = +dorchesterRec.median_rent;
+          if (isNaN(val) || val <= 0) return []; // skip bad data
+          val = Math.min(val, scales.maxMedianRent); // cap high values
+        } else {
+          val = +dorchesterRec.median_price_diff;
+          if (isNaN(val)) return [];
+          val = Math.min(val, scales.maxMedianPriceDiff);
+        }
         const ev = +rec[`eviction_rate_${year}`] || 0;
 
         // always push the polygon
@@ -449,7 +444,7 @@
         maxMedianPriceDiff,
       } = scales;
 
-      if (Flipindex === "median_rent") {
+      if (indicator === "median_rent") {
         map.setPaintProperty("boston-fill", "fill-color", [
           "interpolate",
           ["linear"],
@@ -490,7 +485,7 @@
         layers.evictions ? "visible" : "none"
       );
 
-      updateLegend(Flipindex);
+      updateLegend(indicator);
       return;
     }
 
@@ -714,13 +709,13 @@
       <div class="filter-buttons">
         <button
           class="rent-btn"
-          class:active={Flipindex === "median_rent"}
+          class:active={indicator === "median_rent"}
           on:click={() => selectFilter("indicator", "median_rent")}
           >Median Rent</button
         >
         <button
           class="rent-btn"
-          class:active={Flipindex === "median_price_diff"}
+          class:active={indicator === "median_price_diff"}
           on:click={() => selectFilter("indicator", "median_price_diff")}
           >Price Difference</button
         >
@@ -963,8 +958,8 @@
 
   /* active state */
   .eviction-btn.active {
-    background: #a899e4;
+    background: #4f4f4f;
     color: white;
-    border-color: #a899e4;
+    border-color: #4f4f4f;
   }
 </style>
