@@ -1,11 +1,12 @@
 <script>
   import { onMount } from 'svelte';
-  import { selectedYear, dataLoading, backbaySelectedTracts } from '$lib/stores.js';
+  import { selectedYear, dataLoading, backbaySelectedTracts, selectedFlipindex } from '$lib/stores.js';
   import BackbayMap from '$lib/components/BackbayMap.svelte';
   import ScatterPlot2 from '$lib/components/ScatterPlot2.svelte';
   
-  // Year selection
+  // Year selection and flipindex tracking
   let year;
+  let flipindex;
   let isLoading = true;
   
   // Reference to components
@@ -18,6 +19,10 @@
   
   const unsubscribeYear = selectedYear.subscribe(value => {
     year = value;
+  });
+  
+  const unsubscribeFlipindex = selectedFlipindex.subscribe(value => {
+    flipindex = value;
   });
   
   const unsubscribeLoading = dataLoading.subscribe(value => {
@@ -34,6 +39,15 @@
   
   function setYear(newYear) {
     selectedYear.set(newYear);
+  }
+  
+  function setFlipindex(type) {
+    console.log(`Setting flipindex to ${type} from NeighborhoodSection2`);
+    // Set the flipindex and then refresh components to ensure everything updates
+    selectedFlipindex.set(type);
+    
+    // Wait for the store to update before refreshing
+    setTimeout(() => refreshComponents(), 50);
   }
   
   onMount(() => {
@@ -81,6 +95,7 @@
       unsubscribeYear();
       unsubscribeLoading();
       unsubscribeBackbayTracts();
+      unsubscribeFlipindex();
       clearInterval(checkInactivity);
       document.removeEventListener('mousemove', () => {});
       document.removeEventListener('click', () => {});
@@ -89,12 +104,18 @@
   
   // Combined function to refresh both components
   function refreshComponents() {
+    console.log("Refreshing BackBay neighborhood components");
+    
     // Refresh the map
     refreshBackbayMap();
     
     // Refresh the scatter plot hover state if available
-    if (scatterPlotComponent && typeof scatterPlotComponent.refreshHoverState === 'function') {
-      scatterPlotComponent.refreshHoverState();
+    if (scatterPlotComponent) {
+      if (typeof scatterPlotComponent.refreshScatterPlot === 'function') {
+        scatterPlotComponent.refreshScatterPlot();
+      } else if (typeof scatterPlotComponent.refreshHoverState === 'function') {
+        scatterPlotComponent.refreshHoverState();
+      }
     }
   }
   
@@ -112,11 +133,28 @@
     <p>Explore the relationship between rent price and flip price difference and eviction rates in Back Bay census tracts.</p>
   </div>
   
-  <div class="year-selector">
-    <button class:active={year === '2020'} on:click={() => setYear('2020')}>2020</button>
-    <button class:active={year === '2021'} on:click={() => setYear('2021')}>2021</button>
-    <button class:active={year === '2022'} on:click={() => setYear('2022')}>2022</button>
-    <button class:active={year === '2023'} on:click={() => setYear('2023')}>2023</button>
+  <div class="control-panel">
+    <div class="year-selector">
+      <label>Year:</label>
+      <div class="button-group">
+        <button class:active={year === '2020'} on:click={() => setYear('2020')}>2020</button>
+        <button class:active={year === '2021'} on:click={() => setYear('2021')}>2021</button>
+        <button class:active={year === '2022'} on:click={() => setYear('2022')}>2022</button>
+        <button class:active={year === '2023'} on:click={() => setYear('2023')}>2023</button>
+      </div>
+    </div>
+    
+    <div class="flipindex-selector">
+      <label>Data Type:</label>
+      <div class="button-group">
+        <button class:active={flipindex === 'median_rent'} on:click={() => setFlipindex('median_rent')}>
+          Rent
+        </button>
+        <button class:active={flipindex === 'median_price_diff'} on:click={() => setFlipindex('median_price_diff')}>
+          Flip Difference
+        </button>
+      </div>
+    </div>
   </div>
   
   {#if isLoading}
@@ -136,7 +174,7 @@
   {/if}
   
   <div class="section-footer">
-    <p>Click on census tracts in the map to highlight them in the scatter plot. Use the buttons above to change the year and flip index type.</p>
+    <p>Click on census tracts in the map to highlight them in the scatter plot. Use the buttons above to change the year and data type.</p>
     <p>The data reveals correlations between housing price indicators and eviction rates in Back Bay census tracts.</p>
   </div>
 </section>
@@ -257,5 +295,56 @@
   @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
+  }
+  
+  .control-panel {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    gap: 2rem;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+  }
+  
+  .year-selector, .flipindex-selector {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  
+  .button-group {
+    display: flex;
+    gap: 0.5rem;
+  }
+  
+  label {
+    font-weight: bold;
+    font-size: 0.9rem;
+    color: #666;
+  }
+  
+  .year-selector button, .flipindex-selector button {
+    padding: 0.5rem 1rem;
+    background-color: white;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    color: #000;
+    font-family: 'Roboto', sans-serif;
+    min-width: 70px; /* Ensure consistent button widths */
+  }
+  
+  .year-selector button:hover, .flipindex-selector button:hover {
+    background-color: #f5f5f5;
+  }
+  
+  .year-selector button.active, .flipindex-selector button.active {
+    background-color: #88e4cc; /* Teal for Back Bay */
+    color: black;
+    border-color: #88e4cc;
+    font-weight: bold;
   }
 </style>

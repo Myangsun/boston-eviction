@@ -29,6 +29,10 @@
   let draggedTract = null;
   let hoveredTract = null;
   
+  // Add a flag to track if chart updating is allowed
+  let allowChartUpdate = true;
+  let lastFlipindex = null;
+  
   // Add a keep-alive mechanism for the hover state
   let lastHoverTimestamp = 0;
   let hoverCheckInterval;
@@ -38,22 +42,32 @@
   
   const unsubscribeData = scatterPlotData2.subscribe(value => {
     data = value;
-    if (chart) updateChart();
+    if (chart && allowChartUpdate) updateChart();
   });
   
   const unsubscribeFlipindex = selectedFlipindex.subscribe(value => {
-    Flipindex = value;
-    if (chart) updateChart();
+    // Only update if the value actually changed
+    if (Flipindex !== value) {
+      console.log(`Flipindex changed from ${Flipindex} to ${value}`);
+      lastFlipindex = Flipindex;
+      Flipindex = value;
+      
+      // Force a complete redraw when the flipindex changes
+      if (chart) {
+        allowChartUpdate = true;
+        updateChart(true); // true flag indicates a force update
+      }
+    }
   });
   
   const unsubscribeYear = selectedYear.subscribe(value => {
     year = value;
-    if (chart) updateChart();
+    if (chart && allowChartUpdate) updateChart();
   });
   
   const unsubscribeDataScales = dataScales.subscribe(value => {
     scales = value;
-    if (chart) updateChart();
+    if (chart && allowChartUpdate) updateChart();
   });
   
   const unsubscribeEvictionData = evictionData.subscribe(value => {
@@ -291,10 +305,21 @@
     return bestYear;
   }
   
-  // Set Flipindex type
+  // Set Flipindex type with improved logging and state management
   function setFlipindex(type) {
-    selectedFlipindex.set(type);
-    if (chart) updateChart(); // Add this line to ensure chart updates immediately
+    console.log(`Setting Flipindex to ${type} from button click`);
+    
+    // Only update if the value is actually changing
+    if (type !== Flipindex) {
+      // Allow the update to propagate
+      allowChartUpdate = true;
+      selectedFlipindex.set(type);
+      
+      // Force a redraw after a short delay to ensure store updates have propagated
+      setTimeout(() => {
+        if (chart) updateChart(true); // Force update
+      }, 50);
+    }
   }
   
   // Initialize chart on mount with proper styling
@@ -307,9 +332,10 @@
     // Force immediate data processing and proper styling
     setTimeout(() => {
       chartInitialized = true;
+      allowChartUpdate = true;
       
       if (data && chart) {
-        updateChart();
+        updateChart(true); // Force update on mount
         
         // Immediately apply correct styling to selected points
         chart.selectAll('.selected-points circle')
@@ -467,16 +493,29 @@
   // Add state to track if the chart was already updated
   let chartUpdated = false;
   let updateCount = 0;
-  const MAX_UPDATES = 2; // Limit the number of updates
+  const MAX_UPDATES = 10; // Increased to allow more updates when needed
 
   // Update the chart with new data
-  function updateChart() {
-    // Prevent excessive updates
-    if (!chartInitialized || updateCount >= MAX_UPDATES) {
+  function updateChart(forceUpdate = false) {
+    // Skip if force update is not requested and updates are disabled
+    if (!forceUpdate && !allowChartUpdate) {
+      console.log("Chart update skipped - updates currently disabled");
+      return;
+    }
+    
+    // Prevent excessive updates unless forced
+    if (!forceUpdate && !chartInitialized) {
+      console.log("Chart update skipped - chart not initialized");
+      return;
+    }
+
+    if (!forceUpdate && updateCount >= MAX_UPDATES) {
+      console.log("Max update count reached, skipping update");
       return;
     }
 
     updateCount++;
+    console.log(`Chart update #${updateCount}, force: ${forceUpdate}, flipindex: ${Flipindex}`);
     
     if (!chart || !data || !data.allPoints || !data.allPoints.length) {
       console.log("Cannot update chart - missing data or chart not ready");
@@ -728,6 +767,14 @@
           updateTrajectoriesAndLabels(xScale, yScale);
         })
       );
+    
+    // Temporarily disable updates after this one completes to avoid cascading updates
+    if (!forceUpdate) {
+      allowChartUpdate = false;
+      setTimeout(() => {
+        allowChartUpdate = true;
+      }, 200); // Re-enable after a short delay
+    }
   }
   
   // Add a dedicated function to handle hover state for the component initialization
@@ -783,6 +830,21 @@
     }
   }
 
+  // Add a proper refresh function that forces a complete redraw
+  function refreshScatterPlot() {
+    console.log("Forcing scatter plot refresh");
+    allowChartUpdate = true;
+    updateCount = 0; // Reset update count
+    
+    if (chart && data) {
+      // Force a complete redraw
+      updateChart(true);
+    }
+    
+    // Also refresh hover state if needed
+    refreshHoverState();
+  }
+
   function refreshHoverState() {
     if ($hoveredCensusTract) {
       handleHoveredTract($hoveredCensusTract);
@@ -790,8 +852,8 @@
     }
   }
 
-  // Export the refresh function
-  export { refreshHoverState };
+  // Export the refresh functions
+  export { refreshHoverState, refreshScatterPlot };
 </script>
 
 <div class="chart-container">

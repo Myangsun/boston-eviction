@@ -457,13 +457,22 @@ export const scatterPlotData2 = derived(
     $backbaySelectedTracts, // Changed from $selectedCensusTracts
     $dataScales,
   ]) => {
-    if (!$evictionData || !$evictionData.length)
-      return { allPoints: [], bostonAverage: { x: 0, y: 0 } };
+    if (!$evictionData || !$evictionData.length) {
+      return { 
+        allPoints: [], 
+        bostonAverage: { x: 0, y: 0 },
+        maxX: 0,
+        minX: 0,
+        maxY: 0,
+        minY: 0,
+        allYearsData: {},
+        flipindex: $selectedFlipindex // Add the flipindex to the returned data for comparison
+      };
+    }
 
     // Create data points for scatter plot
     const allPoints = $evictionData
       .map((tract) => {
-    
         let x;
         if ($selectedFlipindex === 'median_rent') {
           x = +tract.median_rent || 0;
@@ -487,7 +496,8 @@ export const scatterPlotData2 = derived(
           tract_id: tract.GEOID,
           x,
           y,
-          selected: $backbaySelectedTracts.includes(tract.GEOID), // Changed from $selectedCensusTracts
+          flipindex: $selectedFlipindex, // Add the flipindex to each point for comparison
+          selected: $backbaySelectedTracts.includes(tract.GEOID)
         };
       })
       .filter((point) => point !== null && point.y < 1); // Filter out 100% eviction rates
@@ -551,7 +561,8 @@ export const scatterPlotData2 = derived(
       minX,
       maxY: $dataScales.maxEvictionRate,
       minY: 0,
-      allYearsData // Add the allYearsData for trajectories
+      allYearsData: allYearsData, // Fixed: add allYearsData
+      flipindex: $selectedFlipindex // Add the flipindex to the returned data for comparison
     };
   }
 );

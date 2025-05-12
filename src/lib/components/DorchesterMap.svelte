@@ -511,6 +511,7 @@
             map.getCanvas().style.cursor = 'pointer';
             
             // Update existing popup instead of creating a new one
+            //  <p>GEOID: ${tractId}</p>
             popup
               .setLngLat(e.lngLat)
               .setHTML(`

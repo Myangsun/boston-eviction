@@ -75,9 +75,10 @@
           const f = e.features[0];
           new mapboxgl.Popup()
             .setLngLat(e.lngLat)
+            // <p>GEOID: ${f.properties.tract_id}</p>
             .setHTML(
               `<h4>Census Tract</h4>
-               <p>GEOID: ${f.properties.tract_id}</p>
+  
                <p>${layers.institutional ? "Institutional" : ""}${layers.large ? "Large" : ""}${layers.medium ? "Medium" : ""}${layers.small ? "Small" : ""} Investors: ${f.properties.investor_count || ""}</p>
                <p>Eviction Rate (${year}): ${((f.properties.eviction_rate || 0) * 100).toFixed(1)}%</p>`
             )
