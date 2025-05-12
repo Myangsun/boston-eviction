@@ -482,22 +482,6 @@
           setTimeout(() => selectDorchesterTracts(), 2000);
         }, 200);
         
-        // Add click handler for census tracts
-        map.on('click', 'dorchester-fill', (e) => {
-          if (e.features.length > 0) {
-            const tractId = e.features[0].properties.tract_id;
-            
-            // Update Dorchester selected census tracts
-            dorchesterSelectedTracts.update(selected => {
-              if (selected.includes(tractId)) {
-                return selected.filter(id => id !== tractId);
-              } else {
-                return [...selected, tractId];
-              }
-            });
-          }
-        });
-        
         // Use a single popup instance for better performance
         map.on('mousemove', 'dorchester-fill', (e) => {
           if (e.features.length > 0) {
@@ -511,7 +495,6 @@
             map.getCanvas().style.cursor = 'pointer';
             
             // Update existing popup instead of creating a new one
-            //  <p>GEOID: ${tractId}</p>
             popup
               .setLngLat(e.lngLat)
               .setHTML(`
@@ -527,6 +510,43 @@
           popup.remove(); // Just remove the popup, don't iterate through DOM
           hoveredCensusTract.set(null); // Clear hover state
         });
+
+        // Add this block to forcibly disable all census tract selection behavior
+        setTimeout(() => {
+          // Clear any tract selection that might have happened
+          dorchesterSelectedTracts.set([]);
+          
+          // Nullify any click handlers by adding event listeners that stop event propagation
+          // This ensures that ANY click on the map won't trigger selection
+          if (map.getCanvas()) {
+            map.getCanvas().addEventListener('click', (e) => {
+              // Only for clicks on the map, not on controls
+              if (e.target === map.getCanvas()) {
+                e.stopPropagation();
+              }
+            }, true); // Use capturing phase to stop event early
+          }
+          
+          // Explicitly disable click-based selection styling
+          map.setPaintProperty('dorchester-fill', 'fill-opacity', [
+            'case',
+            ['==', ['get', 'is_dorchester'], true],
+            0.7, // Normal opacity for Dorchester tracts - no selection highlighting
+            0.2  // Lower opacity for other tracts
+          ]);
+          
+          // Add an explicit empty click handler that takes precedence
+          map.on('click', 'dorchester-fill', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+          });
+          
+          // Force map into a "non-interactive" mode for click selection
+          map.dragPan.disable();
+          map.scrollZoom.disable();
+          map.doubleClickZoom.disable();
+        }, 500);
       });
       
       map.on('error', (e) => {
@@ -1129,7 +1149,8 @@
 
   // Remove redundant function since we're now handling this in the mousemove event
   function addMapHoverInteraction() {
-    // Remove this duplicate function since we now handle hover in the main mousemove event
+    // Keep this as a stub function since it's called elsewhere
+    // but don't add any click handlers
   }
 </script>
 
@@ -1191,6 +1212,8 @@
   :global(.legend-circle-item) {
     display: flex;
     flex-direction: column;
+  }
+  :global(.mapboxgl-popup-content) {
     align-items: center;
     margin-right: 10px;
   }
@@ -1215,6 +1238,21 @@
     padding: 15px;
     border-radius: 5px;
   }
+  
+  :global(.mapboxgl-popup-content h4) {
+    margin: 0 0 10px;
+    font-weight: 500;
+    color: #000;
+  }
+  
+  :global(.mapboxgl-popup-content p) {
+    margin: 5px 0;
+    color: #000;
+  }
+
+    /* padding: 15px;
+    border-radius: 5px;
+  } */
   
   :global(.mapboxgl-popup-content h4) {
     margin: 0 0 10px;

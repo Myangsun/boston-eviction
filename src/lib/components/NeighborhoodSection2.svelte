@@ -47,27 +47,26 @@
     selectedFlipindex.set(type);
     
     // Wait for the store to update before refreshing
-    setTimeout(() => refreshComponents(), 50);
+    setTimeout(() => forceRefreshSelection(), 50);
   }
   
   onMount(() => {
-    // Perform one refresh on mount after a short delay to ensure proper loading
-    if (!initialRefreshPerformed && refreshCounter < 2) {
+    // Add a more aggressive initial refresh with a back-up refresh
+    if (!initialRefreshPerformed) {
       setTimeout(() => {
-        refreshComponents();
+        forceRefreshSelection();
         refreshCounter++;
         
-        // Try once more if back bay selection is still empty
-        if ($backbaySelectedTracts.length === 0) {
-          setTimeout(() => {
-            refreshComponents();
-            refreshCounter++;
-            initialRefreshPerformed = true;
-          }, 1000);
-        } else {
+        // Always do a second refresh after a delay for good measure
+        setTimeout(() => {
+          forceRefreshSelection();
+          refreshCounter++;
           initialRefreshPerformed = true;
-        }
-      }, 500);
+          
+          // One final refresh after everything has settled
+          setTimeout(() => forceRefreshSelection(), 1000);
+        }, 500);
+      }, 300);
     }
     
     // Add an interaction timer to refresh components after inactivity
@@ -107,11 +106,16 @@
     console.log("Refreshing BackBay neighborhood components");
     
     // Refresh the map
-    refreshBackbayMap();
+    if (backbayMapComponent) {
+      if (typeof backbayMapComponent.refreshBackbayMap === 'function') {
+        backbayMapComponent.refreshBackbayMap();
+      }
+    }
     
-    // Refresh the scatter plot hover state if available
+    // Refresh the scatter plot with more explicit checks
     if (scatterPlotComponent) {
       if (typeof scatterPlotComponent.refreshScatterPlot === 'function') {
+        // This should now include selected points refresh
         scatterPlotComponent.refreshScatterPlot();
       } else if (typeof scatterPlotComponent.refreshHoverState === 'function') {
         scatterPlotComponent.refreshHoverState();
@@ -119,11 +123,33 @@
     }
   }
   
+  // Add a function to force both components to refresh selection state
+  function forceRefreshSelection() {
+    console.log("Forcing refresh of Back Bay selection state");
+    
+    // Get the current selection
+    const currentSelection = $backbaySelectedTracts;
+    
+    if (currentSelection && currentSelection.length > 0) {
+      // Force update by temporarily clearing selection and then restoring it
+      const tempSelection = [...currentSelection];
+      backbaySelectedTracts.set([]);
+      
+      setTimeout(() => {
+        backbaySelectedTracts.set(tempSelection);
+        
+        // Then explicitly refresh both components
+        setTimeout(() => refreshComponents(), 50);
+      }, 50);
+    } else {
+      // Just refresh components if there's no selection
+      refreshComponents();
+    }
+  }
+  
   // Export the refreshBackbayMap function for external access
   export function refreshBackbayMap() {
-    if (backbayMapComponent && typeof backbayMapComponent.refreshBackbayMap === 'function') {
-      backbayMapComponent.refreshBackbayMap();
-    }
+    forceRefreshSelection();
   }
 </script>
 

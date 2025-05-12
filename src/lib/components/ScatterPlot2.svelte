@@ -381,6 +381,7 @@
       unsubscribeDataScales();
       unsubscribeEvictionData();
       unsubscribeHoveredTract();
+      unsubscribeBackbayTracts();
       if (chart) chart.selectAll('*').remove();
       if (hoverCheckInterval) clearInterval(hoverCheckInterval);
     };
@@ -670,15 +671,6 @@
           // Hide tooltip
           tooltip.style('opacity', 0);
         }
-      })
-      .on('click', function(event, d) {
-        // When a non-selected point is clicked, add it to the Back Bay selection
-        backbaySelectedTracts.update(selected => 
-          selected.includes(d.tract_id) ? selected : [...selected, d.tract_id]
-        );
-        
-        // Update hover state but don't clear it
-        hoveredTract = d.tract_id;
       });
     
     // Update selected points - matched with ScatterPlot style
@@ -734,15 +726,6 @@
           // Hide tooltip
           tooltip.style('opacity', 0);
         }
-      })
-      .on('click', function(event, d) {
-        // When a selected point is clicked, remove it from the selection
-        backbaySelectedTracts.update(selected => 
-          selected.filter(id => id !== d.tract_id)
-        );
-        
-        hoveredTract = null;
-        hoveredCensusTract.set(null);
       });
     
     // Add drag behavior to all points for trajectory interaction
@@ -839,6 +822,7 @@
     if (chart && data) {
       // Force a complete redraw
       updateChart(true);
+      refreshSelectedPoints();
     }
     
     // Also refresh hover state if needed
@@ -854,6 +838,105 @@
 
   // Export the refresh functions
   export { refreshHoverState, refreshScatterPlot };
+
+  // Add a direct subscription to backbaySelectedTracts
+  const unsubscribeBackbayTracts = backbaySelectedTracts.subscribe(selected => {
+    console.log("ScatterPlot2: backbaySelectedTracts changed:", selected);
+    
+    // Only update if chart exists
+    if (chart) {
+      // First, we need to reset the style of all points
+      chart.selectAll('.points circle')
+        .style('opacity', selected && selected.length > 0 ? 0.3 : 0.6);
+      
+      // Remove all current selected points
+      chart.select('.selected-points').selectAll('*').remove();
+      
+      // Then create new selected points
+      if (selected && selected.length > 0 && data && data.allPoints) {
+        const selectedData = data.allPoints.filter(d => selected.includes(d.tract_id));
+        console.log("ScatterPlot2: Creating selected points:", selectedData);
+        
+        chart.select('.selected-points')
+          .selectAll('circle')
+          .data(selectedData)
+          .enter()
+          .append('circle')
+          .attr('cx', d => xScale(d.x))
+          .attr('cy', d => yScale(d.y))
+          .attr('r', 5)
+          .style('fill', '#88e4cc')
+          .style('opacity', 1)
+          .style('filter', 'drop-shadow(0px 0px 2px rgba(0,0,0,0.5))')
+          .on('mouseover', function(event, d) {
+            d3.select(this)
+              .transition()
+              .duration(150)
+              .attr('r', 7);
+              
+            hoveredTract = d.tract_id;
+            hoveredCensusTract.set(d.tract_id);
+            updateTrajectoriesAndLabels(window.xScale, window.yScale);
+            
+            // Show tooltip
+            tooltip.html(`
+              <strong>Census Tract:</strong> ${d.tract_id}<br>
+              <strong>${Flipindex === 'median_rent' ? 'Median Rent' : 'Median Price Difference'}:</strong> $${d.x.toLocaleString()}<br>
+              <strong>Eviction Rate:</strong> ${(d.y * 100).toFixed(1)}%
+            `)
+            .style('left', (event.pageX + 10) + 'px')
+            .style('top', (event.pageY - 28) + 'px')
+            .style('opacity', 0.9);
+          })
+          .on('mouseout', function() {
+            if (!isDragging) {
+              d3.select(this).transition().duration(250).attr('r', 5);
+              hoveredTract = null;
+              hoveredCensusTract.set(null);
+              tooltip.style('opacity', 0);
+            }
+          });
+      }
+    }
+  });
+  
+  // Add a special refresh method to force re-render selected points
+  function refreshSelectedPoints() {
+    // Force the backbaySelectedTracts subscription handler to run
+    if ($backbaySelectedTracts && chart) {
+      const selected = [...$backbaySelectedTracts];
+      
+      // First, reset all points
+      chart.selectAll('.points circle')
+        .style('opacity', selected.length > 0 ? 0.3 : 0.6);
+      
+      // Remove all current selected points
+      chart.select('.selected-points').selectAll('*').remove();
+      
+      // Then create new selected points
+      if (selected.length > 0 && data && data.allPoints) {
+        const selectedData = data.allPoints.filter(d => selected.includes(d.tract_id));
+        
+        chart.select('.selected-points')
+          .selectAll('circle')
+          .data(selectedData)
+          .enter()
+          .append('circle')
+          .attr('cx', d => xScale(d.x))
+          .attr('cy', d => yScale(d.y))
+          .attr('r', 5)
+          .style('fill', '#88e4cc')
+          .style('opacity', 1)
+          .style('filter', 'drop-shadow(0px 0px 2px rgba(0,0,0,0.5))')
+          .on('mouseover', function(event, d) {
+            // ...existing mouseover code...
+          })
+          .on('mouseout', function() {
+            // ...existing mouseout code...
+          });
+      }
+    }
+  }
 </script>
 
 <div class="chart-container">
