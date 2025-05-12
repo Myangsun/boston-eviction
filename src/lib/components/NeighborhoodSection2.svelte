@@ -172,7 +172,10 @@
       </div>
     </div>
   {/if}
-  
+  <div class="section-header">
+    <h2 class="backbay-findings">Findings</h2>
+  </div>
+
   <div class="text-box-container">
     <div class="text-box">
       <p>Back Bay has some of the highest rent levels in Boston and shows significant flipping profits. High resale margins reflect strong speculative interest in the neighborhood.</p>
@@ -203,6 +206,10 @@
     color: #88e4cc;
     font-size: 2rem;
 
+  }
+  .backbay-findings {
+    color: #88e4cc;
+    font-size: 2rem; /* Pink color for Dorchester */
   }
   
   /* Style the year selector buttons */
@@ -273,26 +280,29 @@
       height: 400px; /* Fixed height for chart on mobile */
     }
   }
-
   .text-box-container {
   display: flex;
-  justify-content: center;
-  gap: 3rem;
-  margin-top: 3rem;
-  flex-wrap: wrap; 
+  flex-wrap: wrap;
+  justify-content: center; /* Center the content horizontally */
+  align-items: stretch; /* Make children stretch to fill height */
+  gap: 50px;
+  margin: 0px auto; /* Center the container with auto margins */
+  margin-top: 10px;
+  max-width: 1200px; 
   }
 
   .text-box {
     border: 3px solid #88e4cc;
     box-shadow: 6px 6px 0px #88e4cc;
     padding: 1.5rem;
-    max-width: 300px;
-    min-height: 240px;
-    color: #88e4cc;
-    font-weight: 600;
-    font-size: 1.2rem;
+    max-width: 350px;
+    min-height: 200px;
+    color: #000;
+    font-size: 1rem;
     line-height: 1.5;
+    font-family: 'Roboto', sans-serif;
   }
+
   
   /* Add loading styles */
   .loading-container {

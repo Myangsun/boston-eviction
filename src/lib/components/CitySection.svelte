@@ -419,7 +419,7 @@
   <div class="section-header">
     <h2>Boston City-Wide Analysis</h2>
     <p>
-      Explore investor ownership and eviction patterns across the entire city of
+      Explore eviction patterns across the entire city of
       Boston.
     </p>
   </div>
@@ -526,12 +526,11 @@
 
     <div class="section-footer">
       <p>
-        This city-wide view reveals patterns of investor ownership and eviction
-        rates across Boston neighborhoods.
+        This project was developed with guidance and feedback from the Metropolitan Area Planning Commission (MAPC). The data is sourced from eviction records, property assessments, real estate transactions, and the 2020 U.S. Census. Additional data is sourced from the 2020 ACS 5-year estimates. Court filings data is retrieved from court records and compiled by Eric Robsky Huntley.
       </p>
       <p>
-        Toggle between different investor types to see how their presence
-        correlates with eviction rates in different areas.
+        Team: Mingyang Sun, Elisa Xia, Jiao Zhao, Hyun Kim
+
       </p>
     </div>
   </div>
@@ -574,9 +573,11 @@
   .section-footer {
     margin-top: 2rem;
     text-align: center;
-    max-width: 800px;
+    max-width: 1200px;
     margin-left: auto;
     margin-right: auto;
+    color: dimgray;
+    font-size: small;
   }
 
   :global(.map-legend) {
