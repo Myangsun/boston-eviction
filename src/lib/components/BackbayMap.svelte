@@ -385,17 +385,24 @@
       map = new mapboxgl.Map({
         container: mapContainer,
         style: 'mapbox://styles/mapbox/light-v11',
-        center: [-71.0550, 42.3167], // backbay approximate center
-        zoom: 13, // Set appropriate initial zoom level
-        minZoom: 10,
-        maxZoom: 18,
-        maxBounds: bostonBounds, 
-        interactive: true, // Ensure interactive is explicitly set to true
+        center: [-71.080, 42.350], // Fixed Back Bay center
+        zoom: 14, // Fixed zoom level for Back Bay
+        minZoom: 14, // Lock zoom to this exact level
+        maxZoom: 14, // Lock zoom to this exact level
+        dragPan: false, // Disable panning completely
+        dragRotate: false, // Disable rotation
+        scrollZoom: false, // Disable scroll zoom
+        doubleClickZoom: false, // Disable double-click zoom
+        touchZoomRotate: false, // Disable touch zoom and rotate
         attributionControl: false // Hide attribution for cleaner UI
       });
       
-      // Add navigation controls to make the map more visibly interactive
-      map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'top-right');
+      // Only add navigation control for the fullscreen option
+      map.addControl(new mapboxgl.NavigationControl({
+        showCompass: false,
+        showZoom: false, // Hide zoom controls
+        visualizePitch: false
+      }), 'top-right');
       
       console.log("Map initialized");
       
@@ -488,6 +495,41 @@
           popup.remove();
           hoveredCensusTract.set(null); // Clear hover state
         });
+
+        // Center map on Back Bay and restrict navigation
+        setTimeout(() => {
+          // Find Back Bay boundary
+          const backbayFeature = $neighborhoodsData?.features?.find(
+            f => f.properties.blockgr2020_ctr_neighb_name === 'Back Bay' || 
+                 f.properties.name === 'Back Bay'
+          );
+          
+          if (backbayFeature) {
+            // Get bounding box
+            const backbayBounds = turf.bbox(backbayFeature);
+            
+            // Set the bounds with minimal padding
+            map.fitBounds(backbayBounds, {
+              padding: 30,
+              duration: 500,
+              maxZoom: 15
+            });
+            
+            // Add map constraints
+            map.scrollZoom.disable();
+            map.boxZoom.disable();
+            map.dragRotate.disable();
+            map.touchZoomRotate.disable();
+            map.dragPan.enable();
+            
+            // Set max bounds
+            const buffer = 0.01;
+            map.setMaxBounds([
+              [backbayBounds[0] - buffer, backbayBounds[1] - buffer],
+              [backbayBounds[2] + buffer, backbayBounds[3] + buffer]
+            ]);
+          }
+        }, 500);
       });
       
       map.on('error', (e) => {
@@ -956,14 +998,6 @@
       // Update legend
       updateLegend();
       
-      // Fit map to Back Bay boundaries
-      if (backbayFeature) {
-        const backbayBounds = turf.bbox(backbayFeature);
-        map.fitBounds(backbayBounds, {
-          padding: 40,
-          duration: 1000
-        });
-      }
     } catch (error) {
       console.error("Error updating map layers:", error);
     }
@@ -1253,6 +1287,11 @@
       console.log('Map clicked, ensuring interactive state');
       mapContainer.focus();
     });
+
+    // Ensure the map doesn't respond to drag events for panning
+    map.dragPan.disable();
+    map.scrollZoom.disable();
+    map.doubleClickZoom.disable();
   }
   
   // Make sure we refresh the map when component becomes visible
@@ -1289,6 +1328,17 @@
         }));
         interactionsInitialized = true;
       }
+
+      // Simply ensure all navigation is disabled
+      if (map) {
+        map.scrollZoom.disable();
+        map.boxZoom.disable();
+        map.dragRotate.disable();
+        map.touchZoomRotate.disable();
+        map.dragPan.disable(); // Also disable panning
+        map.doubleClickZoom.disable();
+        map.keyboard.disable();
+      }
     }, 300);
   }
 
@@ -1311,12 +1361,16 @@
     overflow: hidden;
     position: relative;
     outline: none; /* Remove focus outline */
-    cursor: grab; /* Add grab cursor to indicate draggable */
+    cursor: default; /* Change from grab to default cursor */
   }
   
-  /* Style for when the map is being dragged */
+  /* Remove the grabbing cursor style */
+  :global(.mapboxgl-canvas-container.mapboxgl-interactive) {
+    cursor: default !important;
+  }
+  
   :global(.mapboxgl-canvas-container.mapboxgl-interactive:active) {
-    cursor: grabbing;
+    cursor: default !important;
   }
   
   /* Add style for navigation controls */
