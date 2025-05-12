@@ -9,20 +9,22 @@
     dataScales,
     censusData,
     selectedFlipindex,
-    // Import the dorchesterData store which already contains the median_rent and median_price_diff data
+    // Import dorchesterData but keep it independent from other components
     dorchesterData
   } from "$lib/stores.js";
   import { getMapboxToken } from "$lib/mapboxConfig.js";
 
   let mapContainer, map, legend;
   let Flipindex;
-  selectedFlipindex.set("");
+  // Initialize to empty string but don't modify the global store immediately
+  // This prevents affecting other components that depend on this value
+  let localFlipindex = "";
 
   // local reactive copies
   let layers = {};
   let year;
   let data = [];
-  let fullDorchesterData = []; // Add a variable to store the full dorchester data
+  let fullDorchesterData = []; // Local data from dorchesterData store
   let boundaries = {};
   let scales = {};
   let census = [];
@@ -64,6 +66,7 @@
     if (map) updateMapLayers();
   });
   
+  // Use local variable first, then update store when needed
   const unsubFlip = selectedFlipindex.subscribe((v) => {
     Flipindex = v;
     if (map) updateMapLayers();
@@ -88,7 +91,10 @@
         asian: false,
         other: false,
       });
-      selectedFlipindex.set("");
+      // Use local variable first to avoid impacting other components
+      localFlipindex = "";
+      // Then update the global store
+      selectedFlipindex.set(localFlipindex);
     } else if (category === "demographic") {
       visibleLayers.set({
         institutional: false,
@@ -102,7 +108,10 @@
         asian: type === "asian",
         other: type === "other",
       });
-      selectedFlipindex.set("");
+      // Use local variable first to avoid impacting other components
+      localFlipindex = "";
+      // Then update the global store
+      selectedFlipindex.set(localFlipindex);
     } else if (category === "indicator") {
       visibleLayers.set({
         institutional: false,
@@ -116,12 +125,18 @@
         asian: false,
         other: false,
       });
-      selectedFlipindex.set(type);
+      // Use local variable first to avoid impacting other components
+      localFlipindex = type;
+      // Then update the global store
+      selectedFlipindex.set(localFlipindex);
     }
     updateMapLayers();
   }
 
   onMount(() => {
+    // Use local Flipindex value rather than setting global store
+    localFlipindex = "";
+    
     mapboxgl.accessToken = getMapboxToken();
     const bostonBounds = [
       [-71.347969, 42.207069], //SW
@@ -234,7 +249,7 @@
       unsubLayers();
       unsubYear();
       unsubData();
-      unsubDorchesterData(); // Clean up new subscription
+      unsubDorchesterData(); 
       unsubBounds();
       unsubScales();
       unsubCensus();
