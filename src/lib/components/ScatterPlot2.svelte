@@ -811,7 +811,6 @@
   <div class="chart-explanation">
     <p>Flipping refers to selling a property within two years of its purchase, excluding foreclosures and same-day sales. The price difference between flips refers to the transaction price difference between the original purchase and the resale within that short period.
     </p>
-    <p class="trajectory-note">Hover over or drag points to see eviction rate trajectories across different years.</p>
   </div>
 </div>
 
