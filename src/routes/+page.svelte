@@ -43,6 +43,8 @@
         // Only set error if not already set by the store
         dataLoadError.set("Failed to load required data. Please check your connection and try again.");
       }
+    setupScrollProgress();
+    setupScrollObserver();
     } catch (e) {
       console.error("Error during data loading:", e);
       dataLoadError.set(e.message || "An unexpected error occurred while loading data.");
@@ -259,6 +261,23 @@
       <div class="progress-line"></div>
       <div
         class="progress-dot"
+        class:active={$activeSection === "Dorchester Story"}
+        on:click={() =>
+          document
+            .getElementById("story-dorchester-section")
+            .scrollIntoView({ behavior: "smooth" })}
+        role="button"
+        tabindex="0"
+        on:keydown={(e) =>
+          e.key === "Enter" &&
+          document
+            .getElementById("story-dorchester-section")
+            .scrollIntoView({ behavior: "smooth" })}
+      >
+        <span class="dot-label">Dorchester Story</span>
+      </div>
+      <div
+        class="progress-dot"
         class:active={$activeSection === "neighborhood"}
         on:click={() =>
           document
@@ -272,7 +291,25 @@
             .getElementById("neighborhood-section")
             .scrollIntoView({ behavior: "smooth" })}
       >
-        <span class="dot-label">Neighborhood</span>
+        <span class="dot-label">Dorchester Analysis</span>
+      </div>
+      <div class="progress-line"></div>
+      <div
+        class="progress-dot"
+        class:active={$activeSection === "Back Bay Story"}
+        on:click={() =>
+          document
+            .getElementById("story-backbay-section")
+            .scrollIntoView({ behavior: "smooth" })}
+        role="button"
+        tabindex="0"
+        on:keydown={(e) =>
+          e.key === "Enter" &&
+          document
+            .getElementById("story-backbay-section")
+            .scrollIntoView({ behavior: "smooth" })}
+      >
+        <span class="dot-label">Back Bay Story</span>
       </div>
       <div
         class="progress-dot"
@@ -289,7 +326,7 @@
             .getElementById("neighborhood2-section")
             .scrollIntoView({ behavior: "smooth" })}
       >
-        <span class="dot-label">Neighborhood2</span>
+        <span class="dot-label">Back Bay Analysis</span>
       </div>
       <div class="progress-line"></div>
       <div
