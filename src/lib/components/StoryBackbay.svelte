@@ -247,12 +247,11 @@
     .special-image-container {
         position: sticky;
         top: 80%;
-        left: 14%;
-        width: 80%;
+        width: 100%;
         max-width: 1000px;
         text-align: center;
-        
-        transition: transform 0.5s ease-out;
+
+        transition: transform 0.8s ease-out;
         pointer-events: auto;
         z-index: 1;
     }
@@ -262,7 +261,7 @@
       width: 80%;
       height: auto;
       margin-bottom: 1rem;
-      margin-left: 0px ;
+      margin-left: 40% ;
     }
     
     
