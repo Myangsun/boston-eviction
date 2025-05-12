@@ -76,11 +76,11 @@
           new mapboxgl.Popup()
             .setLngLat(e.lngLat)
             // <p>GEOID: ${f.properties.tract_id}</p>
+            //<h4>Census Tract</h4>
             .setHTML(
-              `<h4>Census Tract</h4>
-  
-               <p>${layers.institutional ? "Institutional" : ""}${layers.large ? "Large" : ""}${layers.medium ? "Medium" : ""}${layers.small ? "Small" : ""} Investors: ${f.properties.investor_count || ""}</p>
-               <p>Eviction Rate (${year}): ${((f.properties.eviction_rate || 0) * 100).toFixed(1)}%</p>`
+              `
+               <p><strong>${layers.institutional ? "Institutional" : ""}${layers.large ? "Large" : ""}${layers.medium ? "Medium" : ""}${layers.small ? "Small" : ""}</strong> Investors: ${f.properties.investor_count || ""}</p>
+               <p><strong>Eviction Rate (${year}):</strong> ${((f.properties.eviction_rate || 0) * 100).toFixed(1)}%</p>`
             )
             .addTo(map);
         }

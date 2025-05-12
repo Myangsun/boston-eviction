@@ -515,8 +515,6 @@
             popup
               .setLngLat(e.lngLat)
               .setHTML(`
-                <h4>Census Tract</h4>
-                <p>GEOID: ${tractId}</p>
                 <p>${investorType.charAt(0).toUpperCase() + investorType.slice(1)} Investors: ${investorCount}</p>
                 <p>Eviction Rate (${year}): ${(evictionRate * 100).toFixed(1)}%</p>
               `)

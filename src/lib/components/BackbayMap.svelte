@@ -478,11 +478,11 @@
             }
             
             // Update existing popup instead of creating a new one
+            //                 <h4>Census Tract</h4>
+            // <p><strong>GEOID:</strong> ${tractId}</p>
             popup
               .setLngLat(e.lngLat)
               .setHTML(`
-                <h4>Census Tract</h4>
-                <p><strong>GEOID:</strong> ${tractId}</p>
                 <p><strong>${Flipindex === 'median_rent' ? 'Median Rent' : 'Median Price Difference'}:</strong> ${formattedValue}</p>
                 <p><strong>Eviction Rate (${year}):</strong> ${(evictionRate * 100).toFixed(1)}%</p>
               `)
@@ -1264,11 +1264,10 @@
         }
         
         // Update existing popup instead of creating a new one
+        //           <p><strong>GEOID:</strong> ${tractId}</p>
         popup
           .setLngLat(e.lngLat)
           .setHTML(`
-            <h4>Census Tract</h4>
-            <p><strong>GEOID:</strong> ${tractId}</p>
             <p><strong>${Flipindex === 'median_rent' ? 'Median Rent' : 'Median Price Difference'}:</strong> ${formattedValue}</p>
             <p><strong>Eviction Rate (${year}):</strong> ${(evictionRate * 100).toFixed(1)}%</p>
           `)
