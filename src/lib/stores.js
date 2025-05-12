@@ -16,6 +16,8 @@ export const visibleLayers = writable({
   medium: false,
   small: false,
   evictions: true,
+  rent: false,
+  flip: false,
 });
 
 // Add the missing exports for data loading state
