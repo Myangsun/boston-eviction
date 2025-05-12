@@ -130,7 +130,7 @@
 <section id="neighborhood2-section" class="section">
   <div class="section-header">
     <h2 class="backbay-title">Back Bay Neighborhood Analysis</h2>
-    <p>Explore the relationship between rent price and flip price difference and eviction rates in Back Bay census tracts.</p>
+    <p>Does the cost of rent and the profit from property flipping indicate eviction risk in Back Bay?</p>
   </div>
   
   <div class="control-panel">
@@ -173,10 +173,19 @@
     </div>
   {/if}
   
-  <div class="section-footer">
-    <p>Click on census tracts in the map to highlight them in the scatter plot. Use the buttons above to change the year and data type.</p>
-    <p>The data reveals correlations between housing price indicators and eviction rates in Back Bay census tracts.</p>
-  </div>
+  <div class="text-box-container">
+    <div class="text-box">
+      <p>Back Bay has some of the highest rent levels in Boston and shows significant flipping profits. High resale margins reflect strong speculative interest in the neighborhood.</p>
+    </div>
+  
+    <div class="text-box">
+      <p>In general, high rent is associated with lower eviction rates. In contrast, lower-rent areas are more likely to experience evictions. But there is a moderate eviction rate within Back Bay, meaning that high-rent properties can not opt out of eviction risks.</p>
+    </div>
+  
+    <div class="text-box">
+      <p>Flip difference has a relatively significant positive relationship with eviction rate, suggesting speculative resale activity contributes to displacement risk. This correlation indicates that speculative turnover may drive displacement more than rent levels alone.</p>
+    </div>
+
 </section>
 
 <style>
@@ -191,7 +200,9 @@
   
   /* Adding the Back Bay section title color */
   .backbay-title {
-    color: #88e4cc; /* Teal color for Back Bay */
+    color: #88e4cc;
+    font-size: 2rem;
+
   }
   
   /* Style the year selector buttons */
@@ -262,14 +273,25 @@
       height: 400px; /* Fixed height for chart on mobile */
     }
   }
-  
-  .section-footer {
-    margin-top: 2rem;
-    text-align: center;
-    max-width: 800px;
-    margin-left: auto;
-    margin-right: auto;
-    padding: 0 20px; /* Add padding to prevent text from touching edges on mobile */
+
+  .text-box-container {
+  display: flex;
+  justify-content: center;
+  gap: 3rem;
+  margin-top: 3rem;
+  flex-wrap: wrap; 
+  }
+
+  .text-box {
+    border: 3px solid #88e4cc;
+    box-shadow: 6px 6px 0px #88e4cc;
+    padding: 1.5rem;
+    max-width: 300px;
+    min-height: 240px;
+    color: #88e4cc;
+    font-weight: 600;
+    font-size: 1.2rem;
+    line-height: 1.5;
   }
   
   /* Add loading styles */
