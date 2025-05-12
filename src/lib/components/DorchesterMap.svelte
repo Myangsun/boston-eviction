@@ -1210,7 +1210,7 @@
   
   :global(.legend-scale) {
     display: flex;
-    align-items: center;
+    align-items: baseline;
     margin-bottom: 10px;
   }
   
@@ -1229,7 +1229,7 @@
   
   :global(.legend-circles) {
     display: flex;
-    align-items: flex-end;
+    align-items: baseline;
     margin-bottom: 5px;
   }
   
