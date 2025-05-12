@@ -9,8 +9,6 @@
     dataScales,
     censusData,
     selectedFlipindex,
-    // Import the dorchesterData store which already contains the median_rent and median_price_diff data
-    dorchesterData
   } from "$lib/stores.js";
   import { getMapboxToken } from "$lib/mapboxConfig.js";
 
@@ -22,7 +20,6 @@
   let layers = {};
   let year;
   let data = [];
-  let fullDorchesterData = []; // Add a variable to store the full dorchester data
   let boundaries = {};
   let scales = {};
   let census = [];
@@ -32,38 +29,26 @@
     layers = v;
     if (map) updateMapLayers();
   });
-  
   const unsubYear = selectedYear.subscribe((v) => {
     year = v;
     if (map) updateMapLayers();
   });
-  
   const unsubData = evictionData.subscribe((v) => {
     data = v;
     if (map) updateMapLayers();
   });
-  
-  // Add subscription to dorchesterData
-  const unsubDorchesterData = dorchesterData.subscribe((v) => {
-    fullDorchesterData = v;
-    if (map) updateMapLayers();
-  });
-  
   const unsubBounds = boundaryData.subscribe((v) => {
     boundaries = v;
     if (map) updateMapLayers();
   });
-  
   const unsubScales = dataScales.subscribe((v) => {
     scales = v;
     if (map) updateMapLayers();
   });
-  
   const unsubCensus = censusData.subscribe((v) => {
     census = v;
     if (map) updateMapLayers();
   });
-  
   const unsubFlip = selectedFlipindex.subscribe((v) => {
     Flipindex = v;
     if (map) updateMapLayers();
@@ -168,21 +153,20 @@
         let metricLabel, metricValue;
         if (Flipindex) {
           metricLabel = Flipindex === "median_rent" ? "Median Rent" : "Price Δ";
-          
-          // Add safety check for p.index_value
-          let indexValue = p.index_value !== undefined ? p.index_value : 0;
-          try {
-            metricValue = `$${indexValue.toLocaleString() || 0}`;
-          } catch (err) {
-            metricValue = `$${indexValue || 0}`;
-          }
+          metricValue = `$${p.index_value?.toLocaleString() || 0}`;
         } else if (
           ["white", "black", "hispanic", "asian", "other"].find(
             (d) => layers[d]
           )
         ) {
-          const demoType = ["white", "black", "hispanic", "asian", "other"].find((d) => layers[d]);
-          metricLabel = `${demoType.charAt(0).toUpperCase() + demoType.slice(1)} %`;
+          metricLabel = `${
+            ["white", "black", "hispanic", "asian", "other"]
+              .find((d) => layers[d])[0]
+              .toUpperCase() +
+            ["white", "black", "hispanic", "asian", "other"]
+              .find((d) => layers[d])
+              .slice(1)
+          } %`;
           metricValue = `${(p.dem_pct * 100).toFixed(1)}%`;
         } else {
           const invType =
@@ -234,7 +218,6 @@
       unsubLayers();
       unsubYear();
       unsubData();
-      unsubDorchesterData(); // Clean up new subscription
       unsubBounds();
       unsubScales();
       unsubCensus();
@@ -364,28 +347,16 @@
 
     // 2) indicator (rent/price)
     if (Flipindex === "median_rent" || Flipindex === "median_price_diff") {
-      // Use dorchesterData store as the source for median_rent and median_price_diff values
-      if (!fullDorchesterData || fullDorchesterData.length === 0) {
-        console.log("Waiting for fullDorchesterData to load");
-        return;
-      }
-
       // 1) build both fill + circle Features
       const feats = boundaries.features.flatMap((bf) => {
         const id = bf.properties.geoid;
-        
-        // Find data from dorchesterData store instead
-        const dorchesterRec = fullDorchesterData.find(d => d.GEOID === id || d.tract_id === id);
-        if (!dorchesterRec) return [];
-        
-        const rec = data.find(d => d.GEOID === id); // Still need for eviction rate
+        const rec = data.find((d) => d.GEOID === id);
         if (!rec) return [];
-        
-        // Get value from dorchesterData which has the same structure
-        const val = Flipindex === "median_rent" 
-          ? +dorchesterRec.median_rent || 0 
-          : +dorchesterRec.median_price_diff || 0;
-          
+
+        const val =
+          Flipindex === "median_rent"
+            ? +rec.median_rent || 0
+            : +rec.median_price_diff || 0;
         const ev = +rec[`eviction_rate_${year}`] || 0;
 
         // always push the polygon

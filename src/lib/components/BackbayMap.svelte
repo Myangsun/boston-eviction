@@ -11,6 +11,8 @@
   
   // Subscribe to store values
   let Flipindex;
+  // Add local default flipindex in case global store is empty
+  let localFlipindex = 'median_rent';
   let year;
   let tracts = [];
   let boundaries = {};
@@ -339,9 +341,14 @@
     });
   }
 
+  // Modified subscription to handle potentially empty Flipindex value
   const unsubscribeFlipindex = selectedFlipindex.subscribe(value => {
-    Flipindex = value;
-    if (map) updateMapLayers();
+    // Always have a default value for Flipindex even if the global store is empty
+    const effectiveValue = value || localFlipindex;
+    if (Flipindex !== effectiveValue) {
+      Flipindex = effectiveValue;
+      if (map) updateMapLayers();
+    }
   });
   
   const unsubscribeYear = selectedYear.subscribe(value => {
@@ -406,7 +413,14 @@
     selectionAttempts = 0;
     lastSelectedTracts = [];
     
-    console.log("BackbayMap component mounted");
+    // Make sure we have a valid flipindex even if global store is empty
+    if (!$selectedFlipindex) {
+      Flipindex = localFlipindex;
+    } else {
+      Flipindex = $selectedFlipindex;
+    }
+    
+    console.log("BackbayMap component mounted with flipindex:", Flipindex);
     
     try {
       // Get Mapbox token from config
@@ -819,7 +833,10 @@
         return;
       }
       
-      console.log("Updating map layers with data");
+      // Get effective Flipindex value
+      const effectiveFlipindex = Flipindex || localFlipindex;
+      
+      console.log("Updating map layers with data, using flipindex:", effectiveFlipindex);
       console.log("Tracts:", tracts.length);
       console.log("Boundaries features:", boundaries.features?.length);
       
@@ -908,9 +925,9 @@
         
         // Get the value based on the selected index
         let indexValue = 0;
-        if (Flipindex === 'median_rent') {
+        if (effectiveFlipindex === 'median_rent') {
           indexValue = +tract[`median_rent`];
-        } else if (Flipindex === 'median_price_diff') {
+        } else if (effectiveFlipindex === 'median_price_diff') {
           indexValue = +tract[`median_price_diff`];
         }
         
@@ -958,7 +975,7 @@
       });
 
       // Update fill layer color scale based on the selected index and its range
-      if (Flipindex === 'median_rent') {
+      if (effectiveFlipindex === 'median_rent') {
         // Scale for median rent (assuming different range)
         map.setPaintProperty('backbay-fill', 'fill-color', [
           'interpolate',
@@ -970,7 +987,7 @@
           3000, '#58cbad', // Darker teal
           3500, '#2da88a' // Darkest teal
         ]);
-      } else if (Flipindex === 'median_price_diff') {
+      } else if (effectiveFlipindex === 'median_price_diff') {
         // Scale for median price difference (different range)
         map.setPaintProperty('backbay-fill', 'fill-color', [
           'interpolate',
@@ -985,7 +1002,7 @@
       }
       
       // Update fill layer color scale based on the selected index
-      if (Flipindex === 'median_rent') {
+      if (effectiveFlipindex === 'median_rent') {
         map.setPaintProperty('backbay-fill', 'fill-color', [
           'interpolate',
           ['linear'],
@@ -996,7 +1013,7 @@
           3000, '#58cbad', // Darker teal
           scales.maxMedianRent || 3500, '#2da88a' // Darkest teal
         ]);
-      } else if (Flipindex === 'median_price_diff') {
+      } else if (effectiveFlipindex === 'median_price_diff') {
         map.setPaintProperty('backbay-fill', 'fill-color', [
           'interpolate',
           ['linear'],
@@ -1085,19 +1102,20 @@
   // Update the legend
   function updateLegend() {
     if (!legend) return;
-    
-    if (!legend) return;
   
     let legendTitle = '';
     let colorScaleLabels = [];
     
-    if (Flipindex === 'median_rent') {
-    legendTitle = 'Median Monthly Rent';
-    colorScaleLabels = ['$400', '$1k', '$2k', '$3k', '$3.5k+'];
-  } else if (Flipindex === 'median_price_diff') {
-    legendTitle = 'Median Price Difference';
-    colorScaleLabels = ['-$50k', '$0', '$50k', '$100k', '$135k+'];
-  }
+    // Use effective Flipindex value
+    const effectiveFlipindex = Flipindex || localFlipindex;
+    
+    if (effectiveFlipindex === 'median_rent') {
+      legendTitle = 'Median Monthly Rent';
+      colorScaleLabels = ['$400', '$1k', '$2k', '$3k', '$3.5k+'];
+    } else if (effectiveFlipindex === 'median_price_diff') {
+      legendTitle = 'Median Price Difference';
+      colorScaleLabels = ['-$50k', '$0', '$50k', '$100k', '$135k+'];
+    }
     
     legend.innerHTML = `
       <div class="legend-title">${legendTitle}</div>
@@ -1352,7 +1370,12 @@
     selectionAttempts = 0;
     selectionInProgress = false;
     
-    console.log("Refreshing Back Bay map");
+    // Make sure we have a valid flipindex even if global store is empty
+    if (!Flipindex) {
+      Flipindex = localFlipindex;
+    }
+    
+    console.log("Refreshing Back Bay map with flipindex:", Flipindex);
     if (!map) return;
     
     // Even if map isn't fully initialized, set up a retry mechanism

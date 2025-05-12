@@ -40,6 +40,10 @@
   // All available years for the data to enable time-based trajectories
   const availableYears = ['2020', '2021', '2022', '2023'];
   
+  // Add a local default flipindex in case global store is empty
+  // This ensures the component works even if CitySection hasn't set a value
+  let localFlipindex = 'median_rent';
+  
   const unsubscribeData = scatterPlotData2.subscribe(value => {
     data = value;
     if (chart && allowChartUpdate) updateChart();
@@ -47,10 +51,13 @@
   
   const unsubscribeFlipindex = selectedFlipindex.subscribe(value => {
     // Only update if the value actually changed
-    if (Flipindex !== value) {
-      console.log(`Flipindex changed from ${Flipindex} to ${value}`);
+    // If the global store value is empty, use our local default
+    const effectiveValue = value || localFlipindex;
+    
+    if (Flipindex !== effectiveValue) {
+      console.log(`Flipindex changed from ${Flipindex} to ${effectiveValue}`);
       lastFlipindex = Flipindex;
-      Flipindex = value;
+      Flipindex = effectiveValue;
       
       // Force a complete redraw when the flipindex changes
       if (chart) {
@@ -145,12 +152,22 @@
           const tooltipX = containerRect.left + margin.left + xPos + 10;
           const tooltipY = containerRect.top + margin.top + yPos - 28;
           
+          // Add safety check for pointData.x
+          let xValueDisplay = "N/A";
+          if (pointData.x !== undefined && pointData.x !== null) {
+            try {
+              xValueDisplay = pointData.x.toLocaleString();
+            } catch (e) {
+              xValueDisplay = String(pointData.x);
+            }
+          }
+          
           tooltip
             .style('left', `${tooltipX}px`)
             .style('top', `${tooltipY}px`)
             .html(`
               <strong>Census Tract:</strong> ${pointData.tract_id}<br>
-              <strong>${Flipindex === 'median_rent' ? 'Median Rent' : 'Median Price Difference'}:</strong> $${pointData.x.toLocaleString()}<br>
+              <strong>${Flipindex === 'median_rent' ? 'Median Rent' : 'Median Price Difference'}:</strong> $${xValueDisplay}<br>
               <strong>Eviction Rate:</strong> ${(pointData.y * 100).toFixed(1)}%
             `)
             .style('opacity', 0.9);
@@ -306,6 +323,7 @@
   }
   
   // Set Flipindex type with improved logging and state management
+  // This function should only update the local flipindex
   function setFlipindex(type) {
     console.log(`Setting Flipindex to ${type} from button click`);
     
@@ -313,7 +331,8 @@
     if (type !== Flipindex) {
       // Allow the update to propagate
       allowChartUpdate = true;
-      selectedFlipindex.set(type);
+      localFlipindex = type; // Update local value
+      selectedFlipindex.set(type); // Update global store
       
       // Force a redraw after a short delay to ensure store updates have propagated
       setTimeout(() => {
@@ -327,6 +346,14 @@
   
   onMount(() => {
     console.log("ScatterPlot2 component mounted");
+    
+    // Ensure we have a default flipindex even if the global store is empty
+    if (!$selectedFlipindex) {
+      Flipindex = localFlipindex;
+    } else {
+      Flipindex = $selectedFlipindex;
+    }
+    
     initializeChart();
     
     // Force immediate data processing and proper styling
@@ -525,6 +552,9 @@
     
     console.log("Updating scatter plot with data points:", data.allPoints.length);
     
+    // Make sure we have a valid Flipindex, using local default if needed
+    const effectiveFlipindex = Flipindex || localFlipindex;
+    
     const innerWidth = width - margin.left - margin.right;
     const innerHeight = height - margin.top - margin.bottom;
     
@@ -532,10 +562,10 @@
     let xScale;
     let xMin, xMax;
 
-    if (Flipindex === 'median_rent') {
+    if (effectiveFlipindex === 'median_rent') {
       xMin = scales.minMedianRent || 394;
       xMax = scales.maxMedianRent || 3501;
-    } else if (Flipindex === 'median_price_diff') {
+    } else if (effectiveFlipindex === 'median_price_diff') {
       xMin = scales.minMedianPriceDiff || -46625;
       xMax = scales.maxMedianPriceDiff || 134500;
     }
@@ -555,7 +585,7 @@
     
     // Update axes
     let xAxis;
-    if (Flipindex === 'median_rent') {
+    if (effectiveFlipindex === 'median_rent') {
       xAxis = d3.axisBottom(xScale)
         .ticks(5)
         .tickFormat(d => `$${d.toLocaleString()}`);
@@ -581,7 +611,7 @@
     
     // Update labels
     chart.select('.x-label')
-      .text(Flipindex === 'median_rent' ? 'Median Rent ($)' : 'Median Price Difference ($)');
+      .text(effectiveFlipindex === 'median_rent' ? 'Median Rent ($)' : 'Median Price Difference ($)');
     
     chart.select('.y-label')
       .text(`${year} Eviction Rate`);
@@ -605,7 +635,7 @@
     chart.select('.boston-avg-label')
       .attr('x', xScale(avgX) + 5)
       .attr('y', yScale(avgY) - 5)
-      .text(`Boston Average (${Flipindex === 'median_rent' ? '$' + avgX.toLocaleString() : '$' + avgX.toLocaleString()}, ${(avgY * 100).toFixed(1)}%)`);
+      .text(`Boston Average (${effectiveFlipindex === 'median_rent' ? '$' + avgX.toLocaleString() : '$' + avgX.toLocaleString()}, ${(avgY * 100).toFixed(1)}%)`);
     
     // Draw trajectories before points so they appear underneath
     updateTrajectoriesAndLabels(xScale, yScale);
@@ -651,7 +681,7 @@
           .style('top', (event.pageY - 28) + 'px')
           .html(`
             <strong>Census Tract:</strong> ${d.tract_id}<br>
-            <strong>${Flipindex === 'median_rent' ? 'Median Rent' : 'Median Price Difference'}:</strong> $${d.x.toLocaleString()}<br>
+            <strong>${effectiveFlipindex === 'median_rent' ? 'Median Rent' : 'Median Price Difference'}:</strong> $${d.x.toLocaleString()}<br>
             <strong>Eviction Rate:</strong> ${(d.y * 100).toFixed(1)}%
           `)
           .style('opacity', 0.9);
@@ -706,7 +736,7 @@
         // Update tooltip
         tooltip.html(`
           <strong>Census Tract:</strong> ${d.tract_id}<br>
-          <strong>${Flipindex === 'median_rent' ? 'Median Rent' : 'Median Price Difference'}:</strong> $${d.x.toLocaleString()}<br>
+          <strong>${effectiveFlipindex === 'median_rent' ? 'Median Rent' : 'Median Price Difference'}:</strong> $${d.x.toLocaleString()}<br>
           <strong>Eviction Rate:</strong> ${(d.y * 100).toFixed(1)}%
         `)
         .style('left', (event.pageX + 10) + 'px')
@@ -881,7 +911,7 @@
             // Show tooltip
             tooltip.html(`
               <strong>Census Tract:</strong> ${d.tract_id}<br>
-              <strong>${Flipindex === 'median_rent' ? 'Median Rent' : 'Median Price Difference'}:</strong> $${d.x.toLocaleString()}<br>
+              <strong>${effectiveFlipindex === 'median_rent' ? 'Median Rent' : 'Median Price Difference'}:</strong> $${d.x.toLocaleString()}<br>
               <strong>Eviction Rate:</strong> ${(d.y * 100).toFixed(1)}%
             `)
             .style('left', (event.pageX + 10) + 'px')

@@ -6,7 +6,8 @@
   
   // Year selection and flipindex tracking
   let year;
-  let flipindex;
+  // Add a local flipindex that's independent from the global store
+  let flipindexLocal = 'median_rent'; // Default value
   let isLoading = true;
   
   // Reference to components
@@ -22,7 +23,8 @@
   });
   
   const unsubscribeFlipindex = selectedFlipindex.subscribe(value => {
-    flipindex = value;
+    // Use the global store value if available, otherwise use local default
+    flipindexLocal = value || flipindexLocal;
   });
   
   const unsubscribeLoading = dataLoading.subscribe(value => {
@@ -41,9 +43,14 @@
     selectedYear.set(newYear);
   }
   
+  // Updated to use local flipindex first, then update the global store
   function setFlipindex(type) {
     console.log(`Setting flipindex to ${type} from NeighborhoodSection2`);
-    // Set the flipindex and then refresh components to ensure everything updates
+    
+    // Update local first
+    flipindexLocal = type;
+    
+    // Then update global store
     selectedFlipindex.set(type);
     
     // Wait for the store to update before refreshing
@@ -51,6 +58,11 @@
   }
   
   onMount(() => {
+    // Initialize with default flipindex if global store is empty
+    if (!$selectedFlipindex) {
+      selectedFlipindex.set(flipindexLocal);
+    }
+    
     // Add a more aggressive initial refresh with a back-up refresh
     if (!initialRefreshPerformed) {
       setTimeout(() => {
@@ -173,10 +185,10 @@
     <div class="flipindex-selector">
       <label>Data Type:</label>
       <div class="button-group">
-        <button class:active={flipindex === 'median_rent'} on:click={() => setFlipindex('median_rent')}>
+        <button class:active={flipindexLocal === 'median_rent'} on:click={() => setFlipindex('median_rent')}>
           Rent
         </button>
-        <button class:active={flipindex === 'median_price_diff'} on:click={() => setFlipindex('median_price_diff')}>
+        <button class:active={flipindexLocal === 'median_price_diff'} on:click={() => setFlipindex('median_price_diff')}>
           Flip Difference
         </button>
       </div>
