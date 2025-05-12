@@ -50,10 +50,15 @@
       dataLoadError.set(e.message || "An unexpected error occurred while loading data.");
     }
 
+    const unsubscribeActiveSection = activeSection.subscribe(value => {
+      console.log("ActiveSection changed to:", value);
+    });
+
     return () => {
       // Clean up subscriptions when component is destroyed
       unsubscribeLoading();
       unsubscribeError();
+      unsubscribeActiveSection(); 
     };
   });
 
@@ -201,6 +206,7 @@
         .scrollIntoView({ behavior: "smooth" });
     }
   }
+
 </script>
 
 {#if isLoading}
@@ -261,7 +267,7 @@
       <div class="progress-line"></div>
       <div
         class="progress-dot"
-        class:active={$activeSection === "Dorchester Story"}
+        class:active={$activeSection === "story-dorchester"}
         on:click={() =>
           document
             .getElementById("story-dorchester-section")
@@ -296,7 +302,7 @@
       <div class="progress-line"></div>
       <div
         class="progress-dot"
-        class:active={$activeSection === "Back Bay Story"}
+        class:active={$activeSection === "story-backbay"}
         on:click={() =>
           document
             .getElementById("story-backbay-section")
@@ -412,9 +418,9 @@
   }
 
   .progress-dot.active {
-    background-color: var(--primary-color);
-    color: white;
-    border-color: var(--primary-color);
+    background-color: var(--primary-color) !important;
+    color: white !important;
+    border-color: var(--primary-color) !important;
     transform: scale(1.2);
   }
 
