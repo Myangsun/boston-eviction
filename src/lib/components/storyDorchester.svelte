@@ -118,10 +118,7 @@
           {#if i === currentScene && isInViewport}
             {#if scene.isSpecial}
               <!-- Special scene with moving image that stops in the middle -->
-              <div 
-                class="special-image-container"
-                style="transform: translate(-50%, {specialPosition}%);"
-              >
+              <div class="special-image-container">
                 <img 
                   src={scene.specialImage} 
                   alt="dorchester not in sale" 
@@ -245,24 +242,23 @@
     /* Special image for scene 6 */
     .special-image-container {
         position: sticky;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%); /* Center both X and Y */
-        
+        top: 80%;
+        left: 10%;
         width: 80%;
-        max-width: 800px;
+        max-width: 1000px;
         text-align: center;
         
-        transition: transform 0.3s ease-out;
+        transition: transform 0.5s ease-out;
         pointer-events: auto;
         z-index: 1;
     }
 
     
     .special-image {
-      width: 100%;
+      width: 112%;
       height: auto;
       margin-bottom: 1rem;
+      margin-left: 0px ;
     }
     
     

@@ -46,18 +46,43 @@
     <button class:active={year === '2023'} on:click={() => setYear('2023')}>2023</button>
   </div>
   
-  <div class="visualization-container">
-    <div class="map-side">
-      <DorchesterMap bind:this={dorchesterMapComponent} />
+  {#if loading}
+    <div class="loading-container">
+      <div class="loader"></div>
+      <p>Loading map and data...</p>
     </div>
-    <div class="chart-side">
-      <ScatterPlot />
+  {:else if error}
+    <div class="error-container">
+      <p>Error loading data: {error}</p>
+      <button on:click={() => window.location.reload()}>Retry</button>
     </div>
+  {:else}
+    <div class="visualization-container">
+      <div class="map-side">
+        <DorchesterMap bind:this={dorchesterMapComponent} />
+      </div>
+      <div class="chart-side">
+        <ScatterPlot />
+      </div>
+    </div>
+  {/if}
+
+  <div class="section-header">
+    <h2 class="dorchester-findings">Findings</h2>
   </div>
   
-  <div class="section-footer">
-    <p>Click on census tracts in the map to highlight them in the scatter plot. Use the buttons above to change the year and investor type.</p>
-    <p>The data reveals a correlation between areas with high investor ownership and increased eviction rates, particularly in the most recent years.</p>
+  <div class="text-box-container">
+    <div class="text-box">
+      <p>Dorchester has one of the highest eviction rates in Boston. It contains more census tracts, where investors, especially large and institutional investors, are above the city average.</p>
+    </div>
+  
+    <div class="text-box">
+      <p>Investor rates differ across census tracts within Dorchester; several census tracts have extremely high institutional investor rates, while others have lower investor rates.</p>
+    </div>
+  
+    <div class="text-box">
+      <p>There is a significant correlation between investor rates and eviction rates. The trend is more evident for institutional investors and large investors.</p>
+    </div>
   </div>
 </section>
 
@@ -73,8 +98,15 @@
   
   /* Adding the Dorchester section title color */
   .dorchester-title {
-    color: #EEB0C2; /* Pink color for Dorchester */
+    color: #EEB0C2;
+    font-size: 2rem; /* Pink color for Dorchester */
   }
+
+  .dorchester-findings {
+    color: #EEB0C2;
+    font-size: 2rem; /* Pink color for Dorchester */
+  }
+  
   
   /* Style the year selector buttons */
   .year-selector button {
@@ -145,8 +177,61 @@
     }
   }
   
-  .section-footer {
-    margin-top: 2rem;
+  .text-box-container {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center; /* Center the content horizontally */
+  align-items: stretch; /* Make children stretch to fill height */
+  gap: 50px;
+  margin: 0px auto; /* Center the container with auto margins */
+  margin-top: 10px;
+  max-width: 1200px; 
+  }
+
+  .text-box {
+    border: 3px solid #EEB0C2;
+    box-shadow: 6px 6px 0px #EEB0C2;
+    padding: 1.5rem;
+    max-width: 350px;
+    min-height: 200px;
+    color: #000;
+    font-size: 1rem;
+    line-height: 1.5;
+    font-family: 'Roboto', sans-serif;
+  }
+
+  /* Add loading styles */
+  .loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 500px;
+    width: 100%;
+  }
+  
+  .loader {
+    border: 5px solid #f3f3f3;
+    border-top: 5px solid #EEB0C2; /* Pink for Dorchester */
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    animation: spin 1s linear infinite;
+    margin-bottom: 20px;
+  }
+  
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+  
+  .error-container {
+    background-color: #f8d7da;
+    color: #721c24;
+    padding: 20px;
+    border-radius: 8px;
+    margin: 20px auto;
+    max-width: 800px;
     text-align: center;
     max-width: 800px;
     margin-left: auto;
