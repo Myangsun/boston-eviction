@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte';
-  import { selectedYear } from '$lib/stores.js';
+  import { selectedYear, dataLoading } from '$lib/stores.js';
   import DorchesterMap from '$lib/components/DorchesterMap.svelte';
   import ScatterPlot from '$lib/components/ScatterPlot.svelte';
   
@@ -10,8 +10,17 @@
   // Reference to the DorchesterMap component
   let dorchesterMapComponent;
   
+  // Add loading and error state variables
+  let loading = true;
+  let error = null;
+  
   const unsubscribeYear = selectedYear.subscribe(value => {
     year = value;
+  });
+  
+  // Subscribe to global data loading state
+  const unsubscribeLoading = dataLoading.subscribe(value => {
+    loading = value;
   });
   
   function setYear(newYear) {
@@ -22,6 +31,7 @@
     // Cleanup on component destroy
     return () => {
       unsubscribeYear();
+      unsubscribeLoading();
     };
   });
   

@@ -14,7 +14,7 @@
   let data;
   let investorType;
   let year;
-  let scales = { maxInvestorCount: 0, maxEvictionRate: 0 };
+  let scales = { maxInvestorCount: 0, maxEvictionRate: 0.5 };
   let isDragging = false;
   let draggedTract = null;
   let hoveredTract = null;
@@ -434,15 +434,6 @@
       .attr('r', 5)
       .style('fill', '#aaa')
       .style('opacity', hasSelectedTracts ? 0.3 : 0.6) // Lower opacity if any tracts are selected
-      .on('click', function(event, d) {
-          // When a non-selected point is clicked, add it to the selection 
-          dorchesterSelectedTracts.update(selected =>
-            selected.includes(d.tract_id) ? selected : [...selected, d.tract_id]
-          );
-          // Show trajectory when clicked
-          hoveredTract = d.tract_id;
-          updateTrajectoriesAndLabels(xScale, yScale);
-      })
       .on('mouseover', function(event, d) {
         d3.select(this).transition()
           .duration(200)
@@ -528,13 +519,6 @@
       .style('stroke', 'none')
       .style('stroke-width', 0)
       .style('filter', 'drop-shadow(0px 0px 2px rgba(0,0,0,0.5))')
-      .on('click', function(event, d) {
-        // Deselect the tract in the map when clicked in the scatter plot
-        dorchesterSelectedTracts.update(selected => selected.filter(id => id !== d.tract_id));
-        hoveredTract = null;
-        hoveredCensusTract.set(null);
-        updateTrajectoriesAndLabels(xScale, yScale);
-      })
       .on('mouseover', function(event, d) {
         d3.select(this).transition()
           .duration(200)
